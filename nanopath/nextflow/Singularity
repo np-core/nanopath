@@ -1,0 +1,20 @@
+Bootstrap: docker
+From: continuumio/miniconda3
+
+%labels
+    name np-assembly-medaka
+    version v0.1.0
+    author esteinig
+
+%post
+    export PATH=/opt/conda/bin:$PATH
+
+    conda install -c conda-forge -c bioconda --yes medaka \
+        && conda clean -a \
+        && find /opt/conda/ -follow -type f -name '*.a' -delete \
+        && find /opt/conda/ -follow -type f -name '*.pyc' -delete
+    
+    pip install nanofilt nanostat
+
+%environment
+    export PATH=/opt/conda/bin:$PATH

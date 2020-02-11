@@ -1,0 +1,11 @@
+Bootstrap: docker
+From: alpine:latest
+
+%labels
+    name nanopath-transport
+    version 0.1.0
+    author esteinig
+
+%files
+    . /data
+

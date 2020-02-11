@@ -1,0 +1,15 @@
+click
+pytest
+paramiko
+pymongo
+mongoengine
+flask
+flask-socketio
+flask-cors
+tqdm
+colorama
+pandas
+seaborn
+scipy
+python-dateutil
+numpy
