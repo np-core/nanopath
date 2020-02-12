@@ -82,7 +82,7 @@ class ArtificialMixture(PoreLogger):
 
     """ Composes artificial mixtures of host and pathogen sequence reads """
 
-    def __init__(self, composition: dict, reads: int = 10000):
+    def __init__(self, composition: dict, reads: int = 10000, verbose: bool = False):
 
         """ Composes artificial mixtures of host and pathogen reads
 
@@ -90,7 +90,7 @@ class ArtificialMixture(PoreLogger):
         :param reads: total number of reads to compose
         """
 
-        PoreLogger.__init__(self, level=logging.INFO)
+        PoreLogger.__init__(self, level=logging.INFO if verbose else logging.ERROR)
 
         self.composition = composition
         self.reads = reads
@@ -112,6 +112,8 @@ class ArtificialMixture(PoreLogger):
             else:
                 fastq[organism] = pyfastx.Fastq(file)
 
+        self.logger.info('Prepared read files - proceeding')
+
         return fastq
 
     def check_proportions(self):
@@ -127,7 +129,7 @@ class ArtificialMixture(PoreLogger):
         elif sum(proportions) > 1.0:
             raise ValueError('Sum of proportions between host and pathogen allocations cannot exceed 1.0')
         else:
-            self.logger.info('Sum of proportions equals 1.0')
+            self.logger.info('Sum of proportions equals 1.0 - proceeding')
 
     def compose(self, fout: Path, shuffle: bool = True):
 
@@ -141,6 +143,8 @@ class ArtificialMixture(PoreLogger):
         :param shuffle: shuffle reads before writing
 
         """
+
+        self.logger.info('Sample and mix read data')
 
         reads_out = []
         for organism, fastq in self.fastq.items():
@@ -157,8 +161,10 @@ class ArtificialMixture(PoreLogger):
             reads_out += read_strings
 
         if shuffle:
+            self.logger.info('Shuffle output reads')
             random.shuffle(reads_out)
 
+        self.logger.info(f'Write reads to: {fout}')
         with fout.open('w') as out:
             for read_str in reads_out:
                 out.write(read_str + '\n')
