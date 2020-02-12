@@ -13,3 +13,4 @@ seaborn
 scipy
 python-dateutil
 numpy
+pyfastx

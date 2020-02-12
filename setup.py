@@ -22,7 +22,8 @@ setup(
         "seaborn",
         "scipy",
         "python-dateutil",
-        "numpy"
+        "numpy",
+        "pyfastx"
     ],
     entry_points="""
         [console_scripts]

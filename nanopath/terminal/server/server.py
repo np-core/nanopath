@@ -8,7 +8,7 @@ VERSION = "0.1"
 @click.group()
 @click.version_option(version=VERSION)
 def server():
-    """ Tasks for: supplementary utility functions """
+    """ Functions for server-side compute and pipelines """
     pass
 
 

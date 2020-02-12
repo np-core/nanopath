@@ -1,0 +1,14 @@
+{
+  "human": {
+    "file": "/data/nanopath/test/human.fq",
+    "proportion": 0.90
+  },
+  "saureus": {
+    "file": "/data/nanopath/test/saureus.fq",
+    "proportion": 0.05
+  },
+  "kpneumoniae": {
+    "file": "/data/nanopath/test/kpneumoniae.fq",
+    "proportion": 0.05
+  }
+}

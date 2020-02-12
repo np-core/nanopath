@@ -1,5 +1,6 @@
 import click
 from .server import server
+from .utils import utils
 
 VERSION = '0.1'
 
@@ -11,4 +12,5 @@ def terminal_client():
     pass
 
 
+terminal_client.add_command(utils)
 terminal_client.add_command(server)
