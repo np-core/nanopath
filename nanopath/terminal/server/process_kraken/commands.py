@@ -1,51 +1,55 @@
 import click
 from pathlib import Path
-from nanopath.pipelines import Metagenome
+from nanopath.processors import KrakenProcessor
 
 
 @click.command()
 @click.option(
-    '--report', '-r', type=str, help='Path or file glob to tax report files'
+    '--report_file',
+    '-r',
+    type=Path,
+    help='Path to tax report files'
 )
 @click.option(
-    '--prefix', '-p', type=str, help='Output prefix for plot file.'
+    '--read_file',
+    '-f',
+    type=Path,
+    help='Path to read classification file'
 )
 @click.option(
-    '--top', '-t', type=int, default=10,
-    help='Show top taxonomic levels in plots [10]'
+    '--output',
+    '-o',
+    type=Path,
+    default='plot.png',
+    help='Output plot file'
 )
 @click.option(
-    '--color', '-c', type=str, default='Greens',
+    '--compose',
+    '-c',
+    type=Path,
+    default=None,
+    help='Composition JSON to run mixture assessment'
+)
+@click.option(
+    '--palette',
+    '-p',
+    type=str,
+    default='Greens',
     help='Color palette for central donut plot.'
 )
 @click.option(
-    '--title', '-t', type=str, default=None,
-    help='Row titles for center plot, comma separated string.'
+    '--verbose',
+    '-v',
+    is_flag=True,
+    help='Verbose terminal output'
 )
-@click.option(
-    '--sub', '-s', is_flag=True,
-    help='Add subplot titles for each column.'
-)
-def process_kraken(report, prefix, top, color, title, sub):
+def process_kraken(report_file, read_file, output, compose, palette, verbose):
 
     """ Process results and generate server data in the metagenome pipeline  """
 
-    mg = Metagenome()
-    mg.set_meta(
-        uuid=None,
-        user=None,
-        name=None,
-        submitted=None,
-        host_removal=''
-    )
-    mg.process_kraken(report=report)
-    mg.get_server_data(
-        fout=Path(f'{prefix}.json')
-    )
-    mg.plot_kraken_summary(
-        plot_file=Path(f'{prefix}.png'),
-        palette=color,
-        top_minor=top,
-        title=title,
-        subtitles=sub
-    )
+    kp = KrakenProcessor(report=report_file, reads=read_file, verbose=verbose)
+
+    if compose is not None:
+        summary, summary_props, negatives = \
+            kp.assess_composition(compose_file=compose)
+        kp.create_summary_plot(summary, summary_props, negatives)

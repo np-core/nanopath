@@ -1,6 +1,7 @@
 import click
 
 from .compose import compose
+from .decon import decon
 
 VERSION = "0.1"
 
@@ -13,3 +14,4 @@ def utils():
 
 
 utils.add_command(compose)
+utils.add_command(decon)

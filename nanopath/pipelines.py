@@ -47,7 +47,7 @@ class Pipeline:
 
 class Metagenome(Pipeline):
 
-    """ Pipeline processing for NP-SEPSIS """
+    """ Pipeline processing for NP-SEPSIS currently excludes Eukaryots / PARASITES / FUNGI """
 
     def __init__(self):
 
@@ -231,7 +231,7 @@ class Metagenome(Pipeline):
             unclassified_percent = 0.
             unclassified_reads = 0
 
-        # Taxon level microbial classification - EXCLUDES METAZOAN PARASITES
+        # Taxon level microbial classification - EXCLUDES METAZOAN PARASITES / FUNGI
 
         bacteria = self.get_subtaxa(df, 'Bacteria')
 

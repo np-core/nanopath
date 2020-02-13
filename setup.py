@@ -23,7 +23,8 @@ setup(
         "scipy",
         "python-dateutil",
         "numpy",
-        "pyfastx"
+        "pyfastx",
+        "pysankey"
     ],
     entry_points="""
         [console_scripts]

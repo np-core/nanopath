@@ -1,1 +1,1 @@
-from .commands import compose
+from .commands import decon
