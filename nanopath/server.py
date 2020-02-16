@@ -26,7 +26,7 @@ class ServerUtilities(PoreLogger):
         self.remote_port = 8822
         self.remote_address = "jc225327@zodiac.hpc.jcu.edu.au"
 
-        self.local_port_out = Path('/data/nanopath/port_out')
+        self.local_port_out = Path('/data/nanopath/port_out/sepsis')
         self.local_port_in = Path('/data/nanopath/port_in')
         self.remote_port_in = Path('/data/nanopath/port_in')
 
@@ -108,15 +108,13 @@ class ServerUtilities(PoreLogger):
         shutil.rmtree(build_dir)
 
     def get_analysis_results(
-        self, pipeline: str = 'metagenome'
+        self, pipeline: str = 'sepsis'
     ):
         analysis_results = []
         for f in (self.local_port_out / pipeline).glob('*.json'):
             with f.open('r') as server_json:
                 result = json.load(server_json)
                 analysis_results.append(result)
-
-        print(f'Utilities: analysis results. {analysis_results}')
 
         return analysis_results
 

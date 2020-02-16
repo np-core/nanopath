@@ -8,7 +8,7 @@ from nanopath.utils import HostDecontaminator
 @click.option(
     '--fastq', '-f', type=Path, help='Input Fastq file, mixed sample (host, microbial)'
 )
-def decon(fastq):
+def decontaminate(fastq):
 
     """ Decontaminate a mixed sample by removing host reads """
 

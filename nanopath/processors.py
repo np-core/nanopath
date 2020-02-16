@@ -20,7 +20,6 @@ class KrakenProcessor(PoreLogger):
         report: Path,
         reads: Path,
         level: str = 'S',
-        host: str = 'Homo sapiens',
         verbose: bool = True
     ):
 
@@ -32,30 +31,66 @@ class KrakenProcessor(PoreLogger):
         self.reads = reads
 
         self.level = level
-        self.host = host
+        self.host = 'Homo sapiens'  # for now always human
 
         self.report_data = self.read_report()
         self.read_data = self.read_classifications()
 
-    def get_unclassified(self):
+        self.total_reads = self.report_data.loc[
+            self.report_data['taxonomy'].isin(
+                ('unclassified', 'root')
+            ), 'reads'
+        ].sum()
+
+    def get_unclassified(self, server_json: bool = False) -> tuple or dict:
+
+        # TODO add roor / cellular animal reads
 
         unclassified = self.report_data[
             self.report_data['taxonomy'] == 'unclassified'
         ]
 
-        percent = float(unclassified['percent'])
-        total = int(unclassified['reads'])
-        reads = self.read_data[self.read_data['classified'] == 'U']
+        nonsense = self.report_data[
+            self.report_data['taxonomy'].isin(
+                ('root', 'cellular organisms')
+            )
+        ]
 
-        return reads, percent, total
+        percent_nonsense = float(
+            nonsense['direct'].sum() / self.total_reads
+        )
 
-    def get_host(self):
+        percent_unclassified = float(
+            unclassified['reads'] / self.total_reads
+        )+ float(percent_nonsense)
+
+        total_unclassified = int(unclassified['reads']) + int(
+            nonsense['direct'].sum()
+        )
+
+        reads = pandas.concat((
+            self.read_data[self.read_data['classified'] == 'U'],
+            self.read_data[self.read_data['taxon'].isin(
+                ('root (taxid 1)', 'cellular organisms (taxid 131567)')  # TODO: GTDB compatibility [#6]
+            )]
+        ))
+
+        if server_json:
+            return {
+                'percent': percent_unclassified,
+                'reads': total_unclassified,
+                'species': 'Unclassified'
+            }
+        else:
+            return percent_unclassified, total_unclassified, reads
+
+    def get_host(self, server_json: bool = False) -> tuple or dict:
 
         host = self.report_data[
             self.report_data['taxonomy'] == self.host
         ]
 
-        percent = float(host['percent'])
+        percent = float(host['reads'] / self.total_reads)
         total = int(host['reads'])
 
         read_idx = []
@@ -65,20 +100,183 @@ class KrakenProcessor(PoreLogger):
                 read_idx.append(i)
         reads = self.read_data.iloc[read_idx]
 
-        return reads, percent, total
+        if server_json:
+            return {
+                'percent': percent,
+                'reads': total,
+                'species': 'Host'
+            }
+        else:
+            return percent, total, reads
+
+    def get_microbial(self, report: bool = False) -> (tuple or None, tuple or None, tuple or None):
+
+        bacteria, viruses, archaea = \
+            self.get_subdomain(self.report_data, 'Bacteria'), \
+            self.get_subdomain(self.report_data, 'Viruses'), \
+            self.get_subdomain(self.report_data, 'Archaea')
+
+        if bacteria is not None:
+            bacteria_data = \
+                float(bacteria.loc[0, 'reads'] / self.total_reads), \
+                int(bacteria.loc[0, 'reads']), \
+                bacteria if report else self.get_reads_from_report(report=bacteria)
+        else:
+            self.logger.info(
+                'Did not find any bacterial classifications in report.'
+            )
+            bacteria_data = None
+
+        if viruses is not None:
+            viruses_data = \
+                float(viruses.loc[0, 'reads'] / self.total_reads), \
+                int(viruses.loc[0, 'reads']), \
+                viruses if report else self.get_reads_from_report(report=viruses)
+        else:
+            self.logger.info(
+                'Did not find any viral classifications in report.'
+            )
+            viruses_data = None
+
+        if archaea is not None:
+            archaea_data = \
+                float(archaea.loc[0, 'reads'] / self.total_reads), \
+                int(archaea.loc[0, 'reads']), \
+                archaea if report else self.get_reads_from_report(report=archaea)
+        else:
+            self.logger.info(
+                'Did not find any archaeal classifications in report.'
+            )
+            archaea_data = None
+
+        return bacteria_data, viruses_data, archaea_data
+
+    def get_reads_from_report(self, report: pandas.DataFrame) -> pandas.DataFrame:
+
+        read_idx = []
+        allowed_taxa = report.taxonomy.tolist()
+        for i, row in self.read_data.iterrows():
+            name = row['taxon'].split('(')[0].strip()
+            if name in allowed_taxa:
+                read_idx.append(i)
+        reads = self.read_data.iloc[read_idx].copy()
+
+        reads.index.name = report.index.name
+
+        return reads
+
+    def summarise_report(self) -> (tuple, dict):
+
+        """ Summarise Kraken report data for server output """
+
+        # Get microbial
+        bacteria_data, virus_data, archaea_data = self.get_microbial(report=True)
+
+        # TODO get eukaryots without humans and metazoa (worms etc)
+        # TODO need Fungi and Protozoa, also in database
+
+        # TODO: Identify contamination, needs work
+        decontaminated, contamination = self.find_contamination(
+            dict(
+                Bacteria=None if bacteria_data is None else bacteria_data[-1],
+                Viruses=None if virus_data is None else virus_data[-1],
+                Archaea=None if archaea_data is None else archaea_data[-1]
+            )
+        )
+
+        bacteria_report = decontaminated[0]
+        virus_report = decontaminated[1]
+
+        # Get bacterial / viral species assignments only:
+        bacteria_report = bacteria_report.loc[
+            bacteria_report['level'] == 'S', :
+        ]
+
+        # Get bacterial / viral species assignments only:
+        virus_report = virus_report.loc[
+          virus_report['level'] == 'S', :
+        ]
+
+        contamination_report = contamination.loc[
+           contamination['level'] == 'S', :
+        ]
+
+        return (bacteria_report, virus_report, contamination_report), \
+               (bacteria_data, virus_data)
+
+    def get_server_data(
+        self,
+        bacteria_report,
+        virus_report,
+        contamination_report,
+        bacteria_data,
+        virus_data
+    ):
+
+        # Get server data format for donut visualization
+        bacteria_server = self.report_to_json(df=bacteria_report)
+        virus_server = self.report_to_json(df=virus_report)
+        contamination_server = self.report_to_json(df=contamination_report)
+
+        summary_server = [
+            self.get_host(server_json=True),
+            self.get_unclassified(server_json=True),
+            {
+                'species': 'Microbial',
+                'reads': bacteria_data[1] + virus_data[1],
+                'percent': bacteria_data[0] + virus_data[0],
+            }
+        ]
+
+        return {
+            'bacteria_plot': bacteria_server,
+            'virus_plot': virus_server,
+            'contamination_plot': contamination_server,
+            'summary_plot': summary_server
+        }
+
+    @staticmethod
+    def find_contamination(data: dict) -> (tuple, pandas.DataFrame):
+
+        """ Identify potential contaminants in Kraken report domains """
+
+        decontaminated = []
+        contaminated = []
+        for name, df in data.items():
+            if df is not None:
+                if name == 'Archaea':
+                    contaminated.append(df)
+                else:
+                    decon = df.loc[df['reads'] > 1, :]
+                    conta = df.loc[df['reads'] <= 1, :]
+                    decontaminated.append(decon)
+                    contaminated.append(conta)
+
+        return decontaminated, pandas.concat(contaminated)
+
+    def report_to_json(self, df: pandas.DataFrame) -> list:
+
+        return [
+            {
+                'species': row['taxonomy'],
+                'percent': float(row['reads'] / self.total_reads),
+                'reads': row['reads']
+            }
+            for i, row in df.iterrows()
+        ]
 
     def check_classifications(self, host_prefix='human'):
 
         # Get unclassified, check how many host, how many microbial
 
-        ureads, upercent, utotal = self.get_unclassified()
+        upercent, utotal, ureads = self.get_unclassified()
         uhost, umicrobial = self._assess(ureads, host_prefix)
 
         self.logger.info(f'Unclassified reads: {uhost} host, {umicrobial} microbial')
 
         # Get reads classified as host, check how many host, microbial
 
-        hreads, hpercent, htotal = self.get_host()
+        hpercent, htotal, hreads = self.get_host()
         hhost, hother = self._assess(hreads, host_prefix)
 
         htotal = hhost+hother
@@ -89,10 +287,6 @@ class KrakenProcessor(PoreLogger):
         self.logger.info(
             f'Reads classified as host: {hother}/{htotal} false positives (other)'
         )
-
-    def get_microbial(self):
-
-        pass
 
     def assess_composition(self, compose_file: Path, host_prefix='human'):
 
@@ -204,7 +398,7 @@ class KrakenProcessor(PoreLogger):
             else:
                 true_domain = 'Microbial'  # Bacteria, Archaea, Viruses !
 
-            predicted_domain = self._get_super_domain(
+            predicted_domain = self.get_superdomain(
                 taxon_name=row['predicted']
             )
 
@@ -277,11 +471,17 @@ class KrakenProcessor(PoreLogger):
 
         self.plot_sankey(data=negative_data, prefix=prefix)
 
-        negative_data.to_csv(f'{prefix}.negatives.tsv', sep='\t', index=False)
-        summary_proportions.to_csv(f'{prefix}.props.tsv', sep='\t', index=False)
-        summary.to_csv(f'{prefix}.reads.tsv', sep='\t', index=False)
+        negative_data.to_csv(
+            f'{prefix}.negatives.tsv', sep='\t', index=False
+        )
+        summary_proportions.to_csv(
+            f'{prefix}.props.tsv', sep='\t', index=True
+        )
+        summary.to_csv(
+            f'{prefix}.reads.tsv', sep='\t', index=True
+        )
 
-    def _get_super_domain(self, taxon_name: str):
+    def get_superdomain(self, taxon_name: str):
 
         """ Get a domain-specific subset of the report dataframe"""
 
@@ -289,7 +489,9 @@ class KrakenProcessor(PoreLogger):
 
         try:
             taxon_index = [
-                i for i, taxon in enumerate(df['taxonomy']) if taxon in taxon_name
+                i for i, taxon in enumerate(
+                    df['taxonomy']
+                ) if taxon in taxon_name
             ][0]
         except IndexError:
             self.logger.error('Something went wrong in _get_super_domain')
@@ -307,6 +509,33 @@ class KrakenProcessor(PoreLogger):
         domain_row = df.iloc[domain_index, :]
 
         return str(domain_row['taxonomy'])
+
+    def get_subdomain(
+        self, report: pandas.DataFrame, taxon: str
+    ) -> pandas.DataFrame or None:
+
+        """ Get a domain-specific subset of the report dataframe"""
+
+        df = report.reset_index()
+
+        try:
+            taxon_index = int(df[df['taxonomy'] == taxon].index.values)
+        except TypeError:
+            self.logger.warning(f'Could not get subdomain of {taxon}')
+            return None
+
+        domain_index = 0
+        for i, level in enumerate(
+                df['level'][taxon_index:]
+        ):
+            if level == 'D' and i > 0:
+                domain_index = taxon_index + i
+                break
+
+        if domain_index == 0:
+            return report.iloc[taxon_index:, :].reset_index()
+        else:
+            return report.iloc[taxon_index:domain_index, :].reset_index()
 
     @staticmethod
     def _assess(reads: pandas.DataFrame, host_prefix: str):
@@ -348,11 +577,8 @@ class KrakenProcessor(PoreLogger):
         prefix: str = None,
     ):
 
-        # if prefix is not None:
-        #     data['prefix'] = [p.split('_')[0] for p in data['prefix']]
-        #     data = data[data['prefix'] == prefix]
-
-        categories = data[true].unique().tolist() + data[predicted].unique().tolist()
+        categories = data[true].unique().tolist() + \
+                     data[predicted].unique().tolist()
 
         colors = {
             categories[i]: c for i, c in enumerate(
@@ -388,7 +614,7 @@ class KrakenProcessor(PoreLogger):
         )
 
         bbox_props = dict(
-            boxstyle="square,pad=0.3", fc="w", ec="k", lw=0.72
+            boxstyle="square,pad=0.3", fc="w", ec="k", lw=0
         )
 
         kw = dict(
