@@ -1,6 +1,6 @@
 import click
 
-from .process_kraken import process_kraken
+from .sepsis import sepsis
 
 VERSION = "0.1"
 
@@ -12,4 +12,4 @@ def server():
     pass
 
 
-server.add_command(process_kraken)
+server.add_command(sepsis)

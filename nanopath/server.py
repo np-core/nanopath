@@ -6,6 +6,8 @@ import shutil
 import logging
 
 from nanopath.utils import run_cmd, PoreLogger
+from nanopath.porerun import PoreRun
+
 from pathlib import Path
 from flask_socketio import emit
 
@@ -26,8 +28,10 @@ class ServerUtilities(PoreLogger):
         self.remote_port = 8822
         self.remote_address = "jc225327@zodiac.hpc.jcu.edu.au"
 
-        self.local_port_out = Path('/data/nanopath/port_out/sepsis')
-        self.local_port_in = Path('/data/nanopath/port_in')
+        self.nanopore_runs = Path('/data/nanopath/port_out/sepsis')
+        self.workflow_results = Path('/home/esteinig/np-core/test_ground')
+
+        self.local_transfer = Path('/data/nanopath/port_in')
         self.remote_port_in = Path('/data/nanopath/port_in')
 
     def launch_request_pipeline(
@@ -98,7 +102,7 @@ class ServerUtilities(PoreLogger):
             )
         else:
             run_cmd(
-                f"cp {transfer_file} {self.local_port_in / pipeline}"
+                f"cp {transfer_file} {self.local_transfer / pipeline}"
             )
 
         emit(
@@ -110,12 +114,26 @@ class ServerUtilities(PoreLogger):
     def get_analysis_results(
         self, pipeline: str = 'sepsis'
     ):
+
+        self.logger.info(
+            f'Parsing results from {self.workflow_results / pipeline}'
+        )
+
         analysis_results = []
-        for f in (self.local_port_out / pipeline).glob('*.json'):
+        for f in (self.workflow_results / pipeline).glob('*.json'):
             with f.open('r') as server_json:
                 result = json.load(server_json)
                 analysis_results.append(result)
 
         return analysis_results
+
+    def get_sequence_runs(self):
+
+        sequence_runs = []
+        for path in self.nanopore_runs.glob('*'):
+            if path.is_dir():
+                for p in path.glob("*"):
+                    if p.is_dir():
+                        pore_run = PoreRun(path=path)
 
 

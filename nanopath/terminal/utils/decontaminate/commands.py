@@ -13,4 +13,6 @@ def decontaminate(fastq):
     """ Decontaminate a mixed sample by removing host reads """
 
     hd = HostDecontaminator(fastq=fastq)
-    hd.decontaminate(method='minikraken2', db=Path.home() / 'resources' / 'minikraken2')
+    hd.decontaminate(
+        method='minikraken2', db=Path.home() / 'resources' / 'minikraken2'
+    )
