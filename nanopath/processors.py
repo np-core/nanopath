@@ -144,6 +144,15 @@ class KrakenProcessor(PoreLogger):
         self.level = level
         self.host = 'Homo sapiens'  # for now always human
 
+        # Reads below which assignments are considered contamination
+        # Since throughput may vary a proportional threshold might not
+        # be applicable. In addition, septic agent in Lachlan's paper
+        # was identified with 18 reads. Default consider a minimum of
+        # 5 reads evidence for real taxonomic assignments.
+
+        # TODO: Improve contamination assignments!
+        self.contamination_threshold = 5
+
         self.report_data = self.read_report()
         self.read_data = self.read_classifications()
 
@@ -397,8 +406,7 @@ class KrakenProcessor(PoreLogger):
 
         return reads
 
-    @staticmethod
-    def find_contamination(data: dict) -> (tuple, pandas.DataFrame):
+    def find_contamination(self, data: dict) -> (tuple, pandas.DataFrame):
 
         """ Identify potential contaminants in Kraken report domains """
 
@@ -411,8 +419,8 @@ class KrakenProcessor(PoreLogger):
                     contaminated.append(df)
                 else:
                     # singleton reads
-                    decon = df.loc[df['reads'] > 1, :]
-                    conta = df.loc[df['reads'] <= 1, :]
+                    decon = df.loc[df['reads'] > self.contamination_read_threshold, :]
+                    conta = df.loc[df['reads'] <= self.contamination_read_threshold, :]
                     decontaminated.append(decon)
                     contaminated.append(conta)
 
