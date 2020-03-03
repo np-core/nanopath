@@ -419,8 +419,8 @@ class KrakenProcessor(PoreLogger):
                     contaminated.append(df)
                 else:
                     # singleton reads
-                    decon = df.loc[df['reads'] > self.contamination_read_threshold, :]
-                    conta = df.loc[df['reads'] <= self.contamination_read_threshold, :]
+                    decon = df.loc[df['reads'] > self.contamination_threshold, :]
+                    conta = df.loc[df['reads'] <= self.contamination_threshold, :]
                     decontaminated.append(decon)
                     contaminated.append(conta)
 
