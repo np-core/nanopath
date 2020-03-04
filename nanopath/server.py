@@ -125,6 +125,12 @@ class ServerUtilities(PoreLogger):
                 result = json.load(server_json)
                 analysis_results.append(result)
 
+        # Sort by completed date:
+
+        analysis_results = sorted(
+            analysis_results, key=lambda x: x['meta']['completed']
+        )
+
         return analysis_results
 
     def get_sequence_runs(self):

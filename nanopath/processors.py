@@ -47,7 +47,7 @@ class AssemblyProcessor(PoreLogger):
 
         return self.get_assembly_data()
 
-    def get_assembly_data(self):
+    def get_assembly_data(self) -> dict:
 
         """ What do we need to know about the assembly?
 
@@ -59,7 +59,10 @@ class AssemblyProcessor(PoreLogger):
         if self.assembler == 'flye':
             self.logger.info('Read assembly information file from Flye')
 
-            info = self.read_assembly_info()
+            try:
+                info = self.read_assembly_info()
+            except FileNotFoundError:
+                return {}
 
             # Simple check for chromosomes / plasmids /viruses
 
@@ -224,7 +227,7 @@ class KrakenProcessor(PoreLogger):
 
         nonsense = self.report_data[
             self.report_data['taxonomy'].isin(
-                ('root', 'cellular organisms')
+                ('root', 'cellular organisms', 'other sequences')
             )
         ]
 
@@ -258,7 +261,11 @@ class KrakenProcessor(PoreLogger):
         reads = pandas.concat((
             self.read_data[self.read_data['classified'] == 'U'],
             self.read_data[self.read_data['taxon'].isin(
-                ('root (taxid 1)', 'cellular organisms (taxid 131567)')  # GTDB [#6]
+                (
+                 'root (taxid 1)',
+                 'cellular organisms (taxid 131567)',
+                 'other sequences (taxid 28384)'
+                 )  # TODO GTDB compatibility [#6]
             )]
         ))
 
