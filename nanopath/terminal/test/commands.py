@@ -1,37 +1,40 @@
 import click
 
 from pathlib import Path
-from nanopath.processors import AssemblyProcessor
+from nanopath.pipelines import NanoPathLive
 
 
 @click.command()
 @click.option(
-    '--fasta',
-    '-f',
+    '--directory',
+    '-d',
     type=Path,
-    help='Path to assembled sequences in Fasta'
+    help=''
 )
 @click.option(
-    '--info',
-    '-i',
+    '--outdir',
+    '-o',
     type=Path,
-    default=None,
-    help='Path to assembly info file (Flye)'
+    help=''
 )
-@click.option(
-    '--verbose',
-    '-v',
-    is_flag=True,
-    help='Verbose terminal output'
-)
-def test(fasta, info, verbose):
+def test(directory, outdir):
 
     """ Task for testing command line functions """
 
-    ap = AssemblyProcessor(
-        fasta=fasta,
-        info_file=info,
-        verbose=verbose
-    )
+    np = NanoPathLive(path=directory)
 
-    ap.get_assembly_data()
+    online_data = np.update_online_view()
+    telemetry_data, _ = np.update_telemetry_view()
+    run_view_data, read_lengths, read_qualities = np.update_run_view(
+        length_bin_min=0,
+        length_bin_max=80000,
+        length_bin_size=2000,
+        quality_bin_min=0.0,
+        quality_bin_max=21.0,
+        quality_bin_size=1.0
+    )
+    print(online_data)
+    print(telemetry_data)
+    print(run_view_data)
+    print(read_lengths)
+    print(read_qualities)

@@ -13,11 +13,11 @@ import tempfile
 
 class PoreLogger:
 
-    def __init__(self, level=logging.ERROR, file: Path = None):
+    def __init__(self, level=logging.ERROR, file: Path = None, name: str = None):
 
         logging.basicConfig(
             level=level,
-            format="[%(asctime)s] [%(name)-7s]     %(message)s",
+            format=f"[%(asctime)s] [%({name if name else 'NanoPath'})-{len(name) if name else 8}s]     %(message)s",
             datefmt='%H:%M:%S',
             filename=file
         )

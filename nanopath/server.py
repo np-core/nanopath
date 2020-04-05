@@ -6,7 +6,6 @@ import shutil
 import logging
 
 from nanopath.utils import run_cmd, PoreLogger
-from nanopath.porerun import PoreRun
 
 from pathlib import Path
 from flask_socketio import emit
@@ -133,13 +132,5 @@ class ServerUtilities(PoreLogger):
 
         return analysis_results
 
-    def get_sequence_runs(self):
-
-        sequence_runs = []
-        for path in self.nanopore_runs.glob('*'):
-            if path.is_dir():
-                for p in path.glob("*"):
-                    if p.is_dir():
-                        pore_run = PoreRun(path=path)
 
 
