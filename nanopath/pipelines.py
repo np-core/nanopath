@@ -34,10 +34,10 @@ class NanoPathLive(PoreLogger):
             self.path.glob('server/*.report')
         )
 
-    def update_run_view(self, **read_length_params) -> (list, list, list):
+    def update_run_view(self, **read_distribution_params) -> (list, list, list):
 
         read_length_dist, read_quality_dist = \
-            self.get_read_distributions(**read_length_params)
+            self.get_read_distributions(**read_distribution_params)
 
         read_stats = self.get_read_statistics()
         general_telemetry, telemetry = self.get_guppy_telemetry()
@@ -93,7 +93,7 @@ class NanoPathLive(PoreLogger):
 
         return yield_series
 
-    def update_online_view(
+    def update_stats_view(
         self, read_stats: pandas.DataFrame = None
     ):
 
@@ -167,7 +167,6 @@ class NanoPathLive(PoreLogger):
         return read_length_bins, read_quality_bins
 
     def get_guppy_telemetry(self) -> (dict, pandas.DataFrame):
-
         try:
             guppy_telemetry = pandas.concat([
                 self.read_telemetry_file(file) for file in self.guppy_telemetry_files
@@ -182,7 +181,6 @@ class NanoPathLive(PoreLogger):
 
         """ Parse basecalling and read statistics for the dashboard run view """
         try:
-            print(self.nanoq_stats_files)
             read_stats = pandas.concat([
                 self.read_nanoq_stats(file) for file in self.nanoq_stats_files
             ]).sort_values(['fast5', 'barcode']).set_index('fast5')

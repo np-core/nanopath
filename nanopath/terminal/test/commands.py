@@ -23,7 +23,7 @@ def test(directory, outdir):
 
     np = NanoPathLive(path=directory)
 
-    online_data = np.update_online_view()
+    online_data = np.update_stats_view()
     telemetry_data, _ = np.update_telemetry_view()
     run_view_data, read_lengths, read_qualities = np.update_run_view(
         length_bin_min=0,

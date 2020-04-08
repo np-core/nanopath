@@ -16,7 +16,7 @@ def collect(path):
 
     npl = NanoPathLive(path=path)
 
-    online_data = npl.update_online_view()
+    online_data = npl.update_stats_view()
     telemetry_data, _ = npl.update_telemetry_view()
     run_view_data, read_lengths, read_qualities = npl.update_run_view(
         length_bin_min=0,

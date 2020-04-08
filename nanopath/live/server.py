@@ -70,21 +70,29 @@ def settings_ping_server():
 def get_live_update(get_live_update):
 
     server_data = get_live_update
-
     log.info('NanoPath live dashboard contacted server.')
     log.info(f'NanoPath will parse the pipeline files at {npl.path}')
 
-    online_data = npl.update_online_view()
-    print(online_data)
+    read_distribution_params: dict = \
+        server_data['user_settings'].get('read_distributions')
+
+    stats_data = npl.update_stats_view()
     telemetry_data, _ = npl.update_telemetry_view()
-    run_view_data, read_lengths, read_qualities = npl.update_run_view()
-
-    print(telemetry_data)
-
-    print(run_view_data)
+    barcode_data, read_lengths, read_qualities = npl.update_run_view(
+        **read_distribution_params
+    )
 
     emit(
-        'get_live_update', {'data': 'Server ping received.'}
+        'get_live_update', {
+            'data': {
+                'stats_view': stats_data,
+                'run_view': {
+                    'barcodes': barcode_data,
+                    'read_lengths': read_lengths,
+                    'read_qualities': read_qualities
+                }
+            }
+        }
     )
 
 
