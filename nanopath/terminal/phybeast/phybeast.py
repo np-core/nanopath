@@ -1,6 +1,6 @@
 import click
 
-from .utils import client as utils_client
+from .utils import utils
 from .call_megalodon import call_megalodon
 
 VERSION = "0.1"
@@ -16,4 +16,4 @@ def phybeast():
 
 
 phybeast.add_command(call_megalodon)
-phybeast.add_command(utils_client)
+phybeast.add_command(utils)
