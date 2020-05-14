@@ -258,6 +258,17 @@ def phybeast_extract_rate(
                     print(rate, tmrca)
                     outfile.write(f"{rate}\t{tmrca}\n")
 
+    elif prep == 'treetime':
+
+        with result_file.open('r') as infile, output_file.open('w') as outfile:
+            for line in infile:
+                if line.strip().startswith('--rate:'):
+                    rate = float(
+                        line.strip().split()[1]
+                    )
+                    print(rate)
+                    outfile.write(f"{rate}\n")
+
 
 def phybeast_plot_date_randomisation(
     replicate_file: Path,
