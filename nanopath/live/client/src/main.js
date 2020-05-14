@@ -3,7 +3,6 @@ import VueDarkMode from "@growthbunker/vuedarkmode";
 
 import App from './App';
 import router from './router';
-
 import BootstrapVue from 'bootstrap-vue';
 
 Vue.use(VueDarkMode, {
@@ -25,20 +24,17 @@ import chroma from 'chroma-js';
 Object.defineProperty(Vue.prototype, '$chroma', { value: chroma });
 
 import TaxDonut from './assets/d3-taxcomp-plugin';
-import HighchartsVue from 'highcharts-vue';
 
-Vue.use(HighchartsVue);
 Vue.use(TaxDonut);
 
-// Highcharts settings
+import VueApexCharts from 'vue-apexcharts'
+Vue.use(VueApexCharts);
 
-import Highcharts from 'highcharts'
-import exportingInit from 'highcharts/modules/exporting'
-import highchartsMore from 'highcharts/highcharts-more'
+Vue.component('apexchart', VueApexCharts);
 
-highchartsMore(Highcharts);
-exportingInit(Highcharts);
+import vuetimeline from "@growthbunker/vuetimeline"
 
+Vue.use(vuetimeline);
 
 // Fontawesome Icons
 
@@ -66,4 +62,3 @@ new Vue({
     router,
     render: h => h(App)
 });
-

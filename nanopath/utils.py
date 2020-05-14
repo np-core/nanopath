@@ -22,7 +22,31 @@ class PoreLogger:
             filename=file
         )
 
-        self.logger = logging.getLogger('Sketchy')
+        self.logger = logging.getLogger(name)
+
+
+def get_output_handle(fpath: str, fastx: bool = False, out: bool = True):
+
+    if fpath == "-":
+        if out:
+            handle = sys.stdout
+        else:
+            handle = sys.stdin
+    else:
+        p = Path(fpath)
+        if not p.parent.is_dir():
+            raise NotADirectoryError(
+                "Directory specified for output file does not exist: {}".format(
+                    p.parent
+                )
+            )
+
+        if fastx:
+            handle = FastxFile(p)
+        else:
+            handle = p.open("w")
+
+    return handle
 
 
 def get_output_handle(fpath: str, fastx: bool = False, out: bool = True):

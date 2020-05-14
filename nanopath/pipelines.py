@@ -1,10 +1,10 @@
-import json
-import logging
 import pandas
+import logging
+import json
 
 from pathlib import Path
 from nanopath.utils import PoreLogger
-from nanopath.processors import KrakenProcessor, AssemblyProcessor
+from nanopath.processors import AssemblyProcessor, KrakenProcessor
 
 
 class NanoPathLive(PoreLogger):

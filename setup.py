@@ -21,7 +21,9 @@ setup(
         "pandas",
         "seaborn",
         "scipy",
+        "dendropy",
         "python-dateutil",
+        "scikit-learn",
         "numpy",
         "pyfastx",
         "pysankey"

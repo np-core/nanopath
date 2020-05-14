@@ -15,3 +15,5 @@ python-dateutil
 numpy
 pyfastx
 pysankey
+dendropy
+scikit-learn
