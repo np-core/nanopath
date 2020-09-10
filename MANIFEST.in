@@ -1,1 +1,2 @@
-recursive-include np_server/containers/ *
+recursive-include nanopath/resources *
+recursive-include nanopath/templates *

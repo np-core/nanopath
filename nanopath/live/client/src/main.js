@@ -23,18 +23,10 @@ import chroma from 'chroma-js';
 
 Object.defineProperty(Vue.prototype, '$chroma', { value: chroma });
 
-import TaxDonut from './assets/d3-taxcomp-plugin';
+import 'zingchart/es6';
+import zingchartVue from 'zingchart-vue';
 
-Vue.use(TaxDonut);
-
-import VueApexCharts from 'vue-apexcharts'
-Vue.use(VueApexCharts);
-
-Vue.component('apexchart', VueApexCharts);
-
-import vuetimeline from "@growthbunker/vuetimeline"
-
-Vue.use(vuetimeline);
+Vue.component('zingchart', zingchartVue)
 
 // Fontawesome Icons
 

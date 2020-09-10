@@ -3,19 +3,13 @@ import logging
 import argparse
 
 from pathlib import Path
-from nanopath.pipelines import NanoPathLive
+from nanopath.server import AppServer
+
 from flask import Flask
 from flask_socketio import SocketIO, emit
 
 parser = argparse.ArgumentParser(
-    description='Server script for NanoPath Live v0.1.0'
-)
-parser.add_argument(
-    '--directory',
-    '-d',
-    type=Path,
-    default=Path('/data/nanopath/live'),
-    help='Path to directory containing output from pipeline [/data/nanopath/live]'
+    description='Server terminal for NanoPath Live v0.1.0'
 )
 parser.add_argument(
     '--port',
@@ -23,6 +17,12 @@ parser.add_argument(
     type=int,
     default=5000,
     help='Port for sockets connecting to dashboard [5000]'
+)
+parser.add_argument(
+    '--pathogen',
+    type=Path,
+    default=Path('/data/nanopath/cadhla_working/nexus/fastq/results/kraken'),
+    help='Location of pathogen pipeline output to parse [$CWD]'
 )
 parser.add_argument(
     '--log',
@@ -38,7 +38,9 @@ DEBUG = True
 app = Flask(__name__)
 app.config.from_object(__name__)
 
-socketio = SocketIO(app, host='0.0.0.0', port=args.port, cors_allowed_origins="*")  # TODO check security here
+socketio = SocketIO(
+    app, host='0.0.0.0', port=args.port, cors_allowed_origins="*"
+)  # TODO check security here
 
 logging.basicConfig(
     level=logging.INFO,
@@ -53,48 +55,62 @@ log = logging.getLogger(__name__)
 
 log.info('Server log started, logging operations.')
 
-npl = NanoPathLive(path=args.directory)
+app_server = AppServer(pathogen_path=args.pathogen)
 
 
-@socketio.on('settings_ping_server')
+@socketio.on('ping_server')
 def settings_ping_server():
     log.info('Server ping received from client.')
     emit(
-        'settings_ping_server', {'data': 'Server ping received.'}
+        'ping_server', {'data': 'Server ping received.'}
     )
     log.info('Server pong emitted to client.')
 
 # from: UserReports
 
 
-@socketio.on('get_live_update')
-def get_live_update(get_live_update):
+@socketio.on('get_pathogen_data')
+def get_pathogen_data(settings):
 
-    server_data = get_live_update
-    log.info('NanoPath live dashboard contacted server.')
-    log.info(f'NanoPath will parse the pipeline files at {npl.path}')
+    log.info('NanoPath live dashboard contacted server to get pathogen data.')
 
-    read_distribution_params: dict = \
-        server_data['user_settings'].get('read_distributions')
+    print(settings)
 
-    stats_data = npl.update_stats_view()
-    telemetry_data, _ = npl.update_telemetry_view()
-    barcode_data, read_lengths, read_qualities = npl.update_run_view(
-        **read_distribution_params
+    _, group_reads, db_server = app_server.collect_pathogen_results(
+        minor_threshold=float(settings['minor_threshold']),
+        major_threshold=float(settings['major_threshold']),
+        groupby=fr"{settings['group_regex']}",
+
     )
 
-    emit(
-        'get_live_update', {
-            'data': {
-                'stats_view': stats_data,
-                'run_view': {
-                    'barcodes': barcode_data,
-                    'read_lengths': read_lengths,
-                    'read_qualities': read_qualities
-                }
-            }
-        }
+    # print(db_server)
+
+    emit('get_pathogen_data', {
+        'message': "Hello from Server",
+        'server_data': {'data': db_server, 'reads': group_reads}
+    })
+
+
+@socketio.on('create_report')
+def create_report(app_data):
+
+    log.info('NanoPath live dashboard contacted server to create report.')
+
+    db_reports, group_reads, _ = app_server.collect_pathogen_results(
+        groupby=fr"{app_data['setting']['group_regex']}"  # No thresholds imposed at collection
     )
+    app_server.collect_pathogen_report(  # reporting threshold in app_data
+        app_data=app_data,
+        db_reports=db_reports,
+        group_reads=group_reads,
+        outdir=Path.home() / 'Desktop'
+    )
+
+    emit('create_report', {
+        'message': "Created report on server",
+        'status': 'success',
+        'report_path': ''
+    })
 
 
 if __name__ == "__main__":

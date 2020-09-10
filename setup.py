@@ -25,13 +25,22 @@ setup(
         "python-dateutil",
         "scikit-learn",
         "numpy",
+        "jinja2",
         "pyfastx",
-        "pysankey"
+        "pysankey",
+        "ratelimiter",
+        "biopython",
+        "networkx",
+        "dateparser",
+        "pyyaml",
+        "phylo-treetime",
+        "ont_fast5_api",
+        "weasyprint"
     ],
     entry_points="""
         [console_scripts]
-        np=nanopath.terminal.client:terminal_client
-        nanopath=nanopath.terminal.client:terminal_client
+        np=nanopath.terminal.cli:terminal_client
+        nanopath=nanopath.terminal.cli:terminal_client
     """,
     version="0.1",
     license="MIT",

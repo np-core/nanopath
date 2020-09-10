@@ -2,7 +2,6 @@ import click
 
 from .assess import assess
 from .compose import compose
-from .decontaminate import decontaminate
 
 VERSION = "0.1"
 
@@ -16,4 +15,3 @@ def utils():
 
 utils.add_command(assess)
 utils.add_command(compose)
-utils.add_command(decontaminate)

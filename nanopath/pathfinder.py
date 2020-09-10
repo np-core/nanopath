@@ -8,10 +8,6 @@ import os
 
 from random import shuffle
 from pathlib import Path
-from nanopath.plots import plot_date_randomisation
-from nanopath.plots import plot_date_regression
-
-import matplotlib.pyplot as plt
 
 
 def run_cmd(cmd, callback=None, watch=False, background=False, shell=False):
@@ -119,8 +115,46 @@ def remove_sample(alignment: Path, outfile: Path, remove: str or list) -> None:
         remove = [remove]
 
     with pysam.FastxFile(alignment) as fin, outfile.open('w') as fout:
+        for entry in fin:
+            if entry.name not in remove:
+                fout.write(str(entry) + '\n')
+
+
+def subset_alignment(alignment: Path, data: Path, outdir: Path, column: str, meta: Path = None) -> None:
+
+    """
+    :param alignment: alignment file fasta
+    :param data: data file with columns name and column
+    :param outdir: output directory for subsets
+    :param column: column to subset by
+    :param meta: meta data file to subset
+    :return: None, outputs subset alignment
+    """
+
+    df = pandas.read_csv(data, sep='\t', header=0)
+
+    if meta is not None:
+        meta_data = pandas.read_csv(meta, sep='\t', header=0)
+    else:
+        meta_data = None
+
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    if column not in df.columns:
+        raise ValueError(f"Column {column} not found.")
+
+    for col, subset in df.groupby(column):
+        names = subset.name.tolist()
+
+        if meta_data is not None:
+            meta_data[meta_data.name.isin(names)].to_csv(
+                outdir / f"{col}.tsv", sep='\t', index=False
+            )
+
+        with pysam.FastxFile(alignment) as fin,\
+                (outdir / f"{col}.fasta").open('w') as fout:
             for entry in fin:
-                if entry.name not in remove:
+                if entry.name in names:
                     fout.write(str(entry) + '\n')
 
 ###################################
@@ -269,83 +303,6 @@ def phybeast_extract_rate(
                     print(rate)
                     outfile.write(f"{rate}\n")
 
-
-def phybeast_plot_date_randomisation(
-    replicate_file: Path,
-    rate_file: Path,
-    tree_file: Path,
-    date_file: Path,
-    tree_format: str = 'nexus',
-    output_file: Path = Path("date_randomisation.png"),
-) -> None:
-
-    """ Plot distribution of date randomised substitution rates
-
-    :param replicate_file: `rates.tab` with replicates from `DateRandomisationPlot`
-    :param rate_file: `rate.txt` containing true rate from `MolecularClock`
-    :param tree_file:
-    :param date_file:
-    :param tree_format:
-
-    :param output_file: output plot file, format by extension
-
-    :returns None, writes to file :param output_file
-
-    """
-
-    fig, axes = plt.subplots(ncols=2, figsize=(27.0, 9))
-    ax1, ax2 = axes.flatten()  # observe order
-
-    # Date Randomisation
-
-    replicate_df = pandas.read_csv(
-        replicate_file, sep='\t', names=['replicate', 'tmrca']
-    )
-
-    replicates = replicate_df.replicate.tolist()
-
-    rate_df = pandas.read_csv(
-         rate_file, sep='\t', names=['rate', 'tmrca']
-    )
-
-    rate = float(rate_df.iloc[0, 0])
-
-    plot_date_randomisation(
-        ax=ax1, replicates=replicates, rate=rate
-    )
-
-    # Regression
-
-    tree = dendropy.Tree.get(path=tree_file, schema=tree_format)
-
-    distances = []
-    tips = []
-    for tip in tree.leaf_node_iter():
-        distances.append(
-            tip.distance_from_root()
-        )
-        tips.append(
-            str(tip.taxon).replace("'", "")
-        )
-
-    distance_df = pandas.DataFrame(
-        {'name': tips, 'distance': distances}
-    )
-
-    date_df = pandas.read_csv(date_file, sep='\t')
-
-    print(date_df)
-    print(distance_df)
-
-    regression_data = date_df.merge(distance_df).dropna(axis=0)
-
-    print(regression_data)
-
-    plot_date_regression(
-        ax=ax2, x=regression_data.date.values, y=regression_data.distance.values
-    )
-
-    fig.savefig(output_file)
 
 #####################################
 # Pipeline Modules Helper Functions #

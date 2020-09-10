@@ -26,10 +26,8 @@ export default {
 
 <style>
 #app {
-  background-color: #171E29;
-}
-#app {
   padding: 5rem;
+  background-color: #171E29;
   margin: 0;
   font-family: Consolas, monaco, monospace;
   -webkit-font-smoothing: antialiased;

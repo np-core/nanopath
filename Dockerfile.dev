@@ -1,0 +1,10 @@
+FROM continuumio/miniconda3
+
+LABEL name="nanopath-dev"
+LABEL version="latest"
+LABEL author="esteinig"
+
+COPY . /nanopath
+
+RUN pip install /nanopath && rm -r /nanopath
+RUN conda install -c conda-forge -c bioconda -c hcc pysam aspera-cli snp-sites

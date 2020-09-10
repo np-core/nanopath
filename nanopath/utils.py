@@ -4,25 +4,27 @@ import sys
 import logging
 import pyfastx
 import random
+import jinja2
+
+import sys
+import contextlib
 
 from pathlib import Path
 from pysam import AlignmentFile, FastxFile
 
-import tempfile
 
 
 class PoreLogger:
 
-    def __init__(self, level=logging.ERROR, file: Path = None, name: str = None):
+    def __init__(self, level=logging.ERROR, name: str = None):
 
         logging.basicConfig(
             level=level,
-            format=f"[%(asctime)s] [%({name if name else 'NanoPath'})-{len(name) if name else 8}s]     %(message)s",
+            format=f"[%(asctime)s] [{name}]     %(message)s",
             datefmt='%H:%M:%S',
-            filename=file
         )
 
-        self.logger = logging.getLogger(name)
+        self.logger = logging.getLogger()
 
 
 def get_output_handle(fpath: str, fastx: bool = False, out: bool = True):
@@ -97,32 +99,29 @@ def run_cmd(cmd, callback=None, watch=False, background=False, shell=False):
         )
 
     output = None
-    try:
-        if shell:
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-        else:
-            proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
 
-        if background:
-            # Let task run in background and return pmid for monitoring:
-            return proc.pid, proc
+    if shell:
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+    else:
+        proc = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE)
 
-        if watch:
-            while proc.poll() is None:
-                line = proc.stdout.readline()
-                if line != "":
-                    callback(line)
+    if background:
+        # Let task run in background and return pmid for monitoring:
+        return proc.pid, proc
 
-            # Sometimes the process exits before we have all of the output, so
-            # we need to gather the remainder of the output.
-            remainder = proc.communicate()[0]
-            if remainder:
-                callback(remainder)
-        else:
-            output = proc.communicate()[0]
-    except:
-        err = str(sys.exc_info()[1]) + "\n"
-        output = err
+    if watch:
+        while proc.poll() is None:
+            line = proc.stdout.readline()
+            if line != "":
+                callback(line)
+
+        # Sometimes the process exits before we have all of the output, so
+        # we need to gather the remainder of the output.
+        remainder = proc.communicate()[0]
+        if remainder:
+            callback(remainder)
+    else:
+        output = proc.communicate()[0]
 
     if callback and output is not None:
         return callback(output)
@@ -188,7 +187,7 @@ class ArtificialMixture(PoreLogger):
         """ Compose an artifical mixture of reads
 
         Read names / decription headers are renamed according to sequentially numbered
-        keys in the composition file, e.. saureus_0, suareus_1 ... to better distinguish
+        keys in the composition file, e.. saureus_0, saureus_1 ... to better distinguish
         between composition components later.
 
         :param fout: file path to output fastq
@@ -261,65 +260,6 @@ class ArtificialMixture(PoreLogger):
         return sampled_reads
 
 
-class HostDecontaminator:
-
-    def __init__(self, fastq: Path):
-
-        self.fastq = fastq
-
-    def decontaminate(
-        self,
-        method='minimap2',
-        db: Path = None,
-        host_mmi: Path = None,
-        microbial_mmi: Path = None,
-        mapqual: int = 60,
-        threads: int = 3
-    ):
-
-        if method == 'minimap2':
-
-            if host_mmi is None or microbial_mmi is None:
-                raise ValueError('Need to specify host index file when using method: minimap2')
-
-            # Reads mapping to human reference:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmpdir = Path(tmpdir)
-
-                run_cmd(
-                    f'minimap2 -ax map-ont {host_mmi} {self.fastq} -o {tmpdir / "aln.sam"} -t {threads} &&'
-                    f'samtools view -Sbq {mapqual} {tmpdir / "aln.sam"} -o {tmpdir / "aln.bam"}'
-                )
-
-                with AlignmentFile(f"{tmpdir / 'aln.bam'}", "rb") as bamfile:
-                    human_reads_mapped = [a.query_name for a in bamfile]
-
-            # Reads mapping to microbial reference:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmpdir = Path(tmpdir)
-
-                run_cmd(
-                    f'minimap2 -ax map-ont {microbial_mmi} {self.fastq} -o {tmpdir / "aln.sam"} &&'
-                    f'samtools view -Sbq {mapqual} {tmpdir / "aln.sam"} -o {tmpdir / "aln.bam"}'
-                )
-
-                with AlignmentFile(f"{tmpdir / 'aln.bam'}", "rb") as bamfile:
-                    microbe_reads_mapped = [a.query_name for a in bamfile]
-
-        elif method == 'minikraken2':
-
-            if db is None:
-                raise ValueError('Need to specify database file when using method: minikraken2')
-
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmpdir = Path(tmpdir)
-
-                run_cmd(
-                    f'kraken2 --db {db} --threads {threads} --output {tmpdir / "reads.out"}'
-                    f'--report {tmpdir / "reads.report"} --use-names --memory-mapping {self.fastq}'
-                )
-
-
 def create_fastx_index(fastx: Path) -> (pyfastx.Fasta, Path):
 
     if is_fasta(fastx):
@@ -344,3 +284,45 @@ def is_fasta(fastx: Path):
 def is_fastq(fastx: Path):
     with fastx.open() as fin:
         return fin.readline().startswith('@')
+
+
+def color_tree(
+    data: str,
+    color_branches: bool = True,
+    template: str = "itol.color.txt",
+    output: Path = Path('itol.color.txt')
+):
+    """
+
+    :param tree:
+    :param data: formatted string to insert into template for data block
+    :param color_branches:
+    :param template:
+    :param output:
+    :return:
+    """
+    template_loader = jinja2.FileSystemLoader(
+        searchpath=f"{Path(__file__).parent / 'templates'}"
+    )
+    template_env = jinja2.Environment(loader=template_loader)
+    template = template_env.get_template(template)
+
+    rendered = template.render(
+        data=data,
+        color_branches=1 if color_branches else 0
+    )
+
+    with output.open('w') as fh:
+        fh.write(rendered)
+
+
+def smart_open(filename: str or Path = None, mode: str = "w"):
+    if filename and filename != '-':
+        if isinstance(filename, str):
+            fh = open(filename, mode)
+        else:
+            fh = filename.open(mode)
+    else:
+        fh = sys.stdout
+
+    return fh

@@ -17,3 +17,10 @@ pyfastx
 pysankey
 dendropy
 scikit-learn
+ratelimiter
+networkx
+dateparser
+jinja2
+pyyaml
+phylo-treetime
+ont_fast5_api

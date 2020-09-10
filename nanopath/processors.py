@@ -10,7 +10,1020 @@ from matplotlib import pyplot as plt
 from pySankey import sankey
 
 from pathlib import Path
-from nanopath.utils import PoreLogger, create_fastx_index
+from nanopath.utils import create_fastx_index, run_cmd, PoreLogger
+
+import dendropy
+
+from pysam import VariantFile
+import pyfastx
+
+
+def read_fasta(fasta: Path) -> dict:
+    return {
+        name: seq.upper() for name, seq in
+        pyfastx.Fasta(str(fasta), build_index=False)  # capital bases
+    }
+
+
+class MegalodonCore:
+
+    """ Class to parse Snippy core SNPs and merge with Megalodon calls """
+
+    def __init__(self, core_vcf: Path = None):
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format=f"[%(asctime)s] [MegalodonCore]     %(message)s",
+            datefmt='%H:%M:%S'
+        )
+
+        self.logger = logging.getLogger()
+
+        self.core_vcf = core_vcf
+
+        self.genotypes = dict()  # snippy genotype list for fasta output
+        self.candidates = pandas.DataFrame()  # to check megalodon completeness
+        self.total = 0  # total number of core variants
+        self.total_samples = 0  # total number of samples
+
+        self.megalodon = []  # filtered megalodon samples
+        self.megalodon_pass = []  # passing megalodon samples
+
+        if core_vcf is not None:
+            self.parse_snippy_core_vcf()
+
+    def parse_megalodon(
+        self,
+        vcf: Path,
+        min_depth: int = 5,
+        min_quality: int = 30
+    ):
+        mv = MegalodonSample(vcf=vcf)
+        mv.filter(min_depth=min_depth, min_quality=min_quality)
+
+        self.megalodon.append(mv)
+
+    def check_megalodon(self, max_missingness: float = 0.05):
+
+        self.megalodon_pass = []
+        for sample in self.megalodon:
+            # First filter out > missingess as it can only increase
+            if sample.missingness > max_missingness:
+                self.logger.info(
+                    f'Removed {sample.name}, missing rate '
+                    f'{round(sample.missingness, 4)} > {max_missingness}'
+                )
+                continue
+            # Compare to core SNPs and check if all candidates present
+            # Should never be larger than candidate variants input
+            if sample.total < self.total:
+                self.logger.info(
+                    f'Missing {self.total - sample.total} '
+                    f'candidate variants in {sample.name} - filling and '
+                    f'recomputing missing rate'
+                )
+                # Add missing candidates (N) and update missingness
+                sample.fill_candidates(variants=self.candidates)
+
+                # Filter again for missingness in case > threshold
+                if sample.missingness > max_missingness:
+                    self.logger.info(
+                        f'Removed {sample.name}, missing rate after filling '
+                        f'{sample.missingness} > {max_missingness}'
+                    )
+                    continue
+
+            self.megalodon_pass.append(sample)
+
+        self.logger.info(
+            f'Retained {len(self.megalodon_pass)} samples from Megalodon'
+        )
+
+    def parse_snippy_core_vcf(self):
+
+        # TODO: Snippy VCF must be ordered - should always be the case!
+
+        self.logger.info('Processing: Snippy VCF')
+
+        calls = []
+        self.genotypes = {}
+        self.total = 0
+        for rec in VariantFile(self.core_vcf).fetch():
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts
+
+            for sample, data in rec.samples.items():
+
+                try:
+                    genotype = data['GT'][0]  # tuple, but only one entry
+                except IndexError:
+                    raise IndexError(
+                        f'Error parsing GT: {chromosome} - {position}'
+                    )
+
+                if genotype > 0:
+                    # Variant called
+                    try:
+                        call = variants[genotype - 1]
+                    except IndexError:
+                        raise IndexError(
+                            f'Error parsing ALT: {chromosome} - {position}'
+                        )
+                else:
+                    call = reference
+
+                if sample not in self.genotypes.keys():
+                    self.genotypes[sample] = [call]
+                else:
+                    self.genotypes[sample].append(call)
+
+            calls.append(dict(
+                chromosome=chromosome,
+                position=position,
+                ref=reference
+            ))
+            self.total += 1
+            self.total_samples = len(self.genotypes)
+
+        self.logger.info(
+            f'Parsed {self.total} core variants across '
+            f'{self.total_samples} samples from Snippy'
+        )
+
+        # Check that all genotypes have total length
+        # matching number of core variants:
+        for sample, genotype in self.genotypes.items():
+            if len(genotype) != self.total:
+                self.logger.error(
+                    f"Genotype for sample {sample} "
+                    f"should be length: {self.total} ("
+                    f"currently: {len(genotype)}) "
+                )
+
+        # Should be sorted, but make sure it is
+        self.candidates = pandas.DataFrame(calls)\
+            .sort_values(['chromosome', 'position'])
+
+    def create_alignment(self, fasta: Path, merge: bool = True):
+
+        """ Create alignment file from Megalodon calls
+
+        :param fasta: output alignment in fasta format
+        :param merge: merge output alignment with fasta
+        :return:
+
+        """
+
+        self.logger.info(f'Creating alignment from calls: {fasta}')
+
+        with fasta.open('w') as fasta_out:
+            for sample in self.megalodon_pass:
+                fasta_out.write(
+                    sample.get_fasta_entry()
+                )
+
+            if merge:
+                self.logger.info(
+                    f'Merging Snippy variants to file: {fasta}'
+                )
+                for sample, genotype in self.genotypes.items():
+                    record = f">{sample}\n{''.join(genotype)}\n"
+                    fasta_out.write(record)
+
+    def filter_invariant_sites(self, alignment: Path, fasta: Path):
+
+        # Read alignment into a DataFrame and check columns for invariant sites
+
+        self.logger.info(f'Removing invariant sites from: {alignment}')
+
+        samples = []
+        genotypes = []
+        with alignment.open('r') as aln:
+            for line in aln:
+                if line.startswith('>'):
+                    name = line.strip().replace('>', '')
+                else:
+                    genotypes.append(list(
+                        line.strip()
+                    ))
+                    samples.append(name)
+
+        if not genotypes:
+            raise ValueError('Could not read alignment')
+
+        df = pandas.DataFrame(data=genotypes, index=samples)
+
+        self.logger.info(
+            f'Input alignment length: {len(genotypes[0])}'
+        )
+
+        invariant_sites = []
+        # Full invariant sites without missing
+        for site_index, col in df.iteritems():
+            if col.nunique() == 1:
+                self.logger.info(f'Found invariant site: {site_index}')
+                invariant_sites.append(site_index)
+            if col.nunique() == 2 and 'N' in col.unique():
+                self.logger.info(f'Found invariant site: {site_index}')
+                invariant_sites.append(site_index)
+
+        self.logger.info(
+            f'Removing {len(invariant_sites)} invariant sites from alignment'
+        )
+
+        df = df.drop(invariant_sites, axis=1)
+
+        self.logger.info(
+            f'Filtered alignment length: {len(df.columns)}'
+        )
+        self.logger.info(f'Writing filtered alignment to: {fasta}')
+
+        with fasta.open('w') as out:
+            for sample, row in df.iterrows():
+                record = f'>{sample}\n{"".join(row)}\n'
+                out.write(record)
+
+    def create_full_alignment(self, reference: Path, fasta: Path):
+
+        """ Create a full alignment of the reference genome (substituted)
+
+        :param reference:
+        :return:
+
+        """
+
+        self.logger.info(
+            f'Creating full alignment: {fasta}'
+        )
+
+        ref = read_fasta(fasta=reference)
+        genotypes = self.genotypes.copy()
+
+        for sample in self.megalodon_pass:
+            if sample.name in genotypes.keys():
+                self.logger.error(
+                    f'ONT sample {sample.name} is already in Snippy '
+                    f'genotype list, this should not be the case.'
+                )
+                exit(1)
+            genotypes[sample.name] = sample.get_genotypes()
+
+        # Insert calls into reference sequences and output to FASTA
+        # Multiple chromosomes are concatenated into a single sequence
+        with fasta.open('w') as alignment:
+            for name, genotype in genotypes.items():
+                self.logger.info(
+                    f'Replacing variant sites in reference sequences for {name}'
+                )
+                variant_ref = dict()
+                for chromosome in self.candidates.chromosome.unique():
+                    try:
+                        seq = list(ref[chromosome])
+                    except KeyError:
+                        self.logger.error(
+                            f'Sequence {chromosome} not in reference.'
+                        )
+                        exit(1)
+
+                    for i, row in self.candidates.iterrows():
+                        position = row['position']
+                        seq[position] = genotype[i]
+
+                    variant_ref[chromosome] = "".join(seq)
+
+                concat_seq = ''.join(
+                    variant_ref[key] for key in sorted(variant_ref.keys())
+                )
+                record = f'>{name}\n{concat_seq}\n'
+                alignment.write(record)
+
+
+class MedakaCore:
+
+    def __init__(
+        self,
+        outdir: Path = None,
+        reference: Path = None,
+        prefix: str = 'core'
+    ):
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format=f"[%(asctime)s] [MedakaCore]     %(message)s",
+            datefmt='%H:%M:%S'
+        )
+
+        self.logger = logging.getLogger()
+
+        self.reference = reference
+
+        self.outdir = outdir
+        self.prefix = prefix
+
+        self.medaka = []  # medaka samples
+        self.snippy = []  # snippy samples
+
+    def parse_medaka(
+        self,
+        medaka_directory: Path,
+        min_quality: int = 30,
+        min_depth: int = 10
+    ):
+        """ Parse VCF file and corresponding aligned reads from Medaka
+
+        :param medaka_directory: path to directory containing .vcf / .bam
+        :param min_quality: minimum genotype quality to include from Medaka calls
+        :param min_depth: minimum depth from read alignment against reference
+            to consider a site present for core computation
+
+        """
+
+        # Process Medaka VCF and BAM file to define
+        # excluded (non-core) positions
+        for vcf in sorted([
+            f for f in medaka_directory.glob('*.vcf')
+        ]):
+            bam_file = vcf.parent / f'{vcf.stem}.bam'
+            ms = MedakaSample(
+                vcf=vcf,
+                bam=bam_file,
+                min_depth=min_depth
+            )
+            ms.filter(min_quality=min_quality)
+
+            self.logger.info(
+                f'Processed {len(ms.data)} variants in sample: {ms.name}'
+            )
+            self.medaka.append(ms)
+
+    def parse_snippy(self, snippy_directory: Path):
+
+        """ Parse VCF files and corresponding aligned reference sequence from Snippy
+
+        :param snippy_directory: path to directory containing .vcf / .aligned.fa
+
+        """
+
+        for vcf in sorted([
+            f for f in snippy_directory.glob('*.vcf')
+        ]):
+            # Process Snippy VCF + aligned reference genome
+            # to define excluded (non-core) positions
+            alignment_fasta = vcf.parent / f'{vcf.stem}.aligned.fa'
+            ss = SnippySample(vcf=vcf, aligned=alignment_fasta)
+
+            self.logger.info(
+                f'Processed {len(ss.data)} variants in sample: {ss.name}'
+            )
+            self.snippy.append(ss)
+
+    def call_hybrid_core(
+        self,
+        include_reference: bool = True
+    ):
+
+        """ Determine core variants from Snippy and Medaka samples  """
+
+        # Merge samples from Snippy and Medaka
+
+        samples = self.snippy + self.medaka
+
+        exclude = {}
+        snp_positions = {}
+        for sample in samples:
+            # For each  chromosome add the excluded positions to a
+            # dictionary of chromosome: excluded sites for all samples
+            for chrom, excluded_positions in sample.excluded_positions.items():
+                if chrom not in exclude.keys():
+                    exclude[chrom] = excluded_positions
+                else:
+                    exclude[chrom] += excluded_positions
+
+            # For each chromosome, add the called positions to a dictionary
+            # of chromosome: called positions for all samples
+            for chrom, positions in sample.get_snp_positions().items():
+                if chrom in snp_positions.keys():
+                    snp_positions[chrom] += positions
+                else:
+                    snp_positions[chrom] = positions
+
+        # For each chromosomes, determine the sites to exclude across all samples
+        # corresponding to called sites that fall into low coverage or gaps
+        # in any sample (non core sites)
+        snps_to_exclude = {}
+        for chrom, excluded_sites in exclude.items():
+            snps_to_exclude[chrom] = \
+                set(snp_positions[chrom]).intersection(
+                    pandas.Series(excluded_sites).unique().tolist()
+                )
+
+        # For each chromosome, determine the unique sites across all samples
+        # and check how many of them fall into non-core sites, then
+        # remove from unique sites to get the final core sites:
+        core_sites = {}
+        for chrom, to_exclude in snps_to_exclude.items():
+            unique_snp_positions = pandas.Series(
+                snp_positions[chrom]
+            ).unique().tolist()
+
+            self.logger.info(
+                f'Detected a total of {len(unique_snp_positions)} '
+                f'unique variants on {chrom}'
+            )
+            self.logger.info(
+                f'Excluded {len(to_exclude)} variants due to '
+                f'low coverage or gaps on {chrom}'
+            )
+            core_sites[chrom] = [
+                p for p in unique_snp_positions if p not in to_exclude
+            ]
+            self.logger.info(
+                f'Keeping {len(core_sites[chrom])} core variants on {chrom}'
+            )
+
+        # Create the filtered core genome sites for storage
+        # in filtered data attribute, and output of sites to VCF
+        all_core_data = []
+        self.logger.info('Processing core variant calls')
+        for sample in samples:
+            filtered = []
+            for chrom, data in sample.data.groupby('chromosome'):
+                filtered.append(
+                    data[data['position'].isin(core_sites[chrom])]
+                )
+            sample.data_core = pandas.concat(filtered)
+            all_core_data.append(sample.data_core)
+
+        # Output #
+
+        # Get a table of unique core sites and their associated data:
+        self.logger.info(
+            f'Writing full core variant table to: {self.prefix}.tsv'
+        )
+        core_site_data = pandas.concat(all_core_data).drop_duplicates(
+            ignore_index=True, subset=['chromosome', 'position']
+        )
+
+        core_site_table = core_site_data[
+            ['chromosome', 'position', 'ref', 'alt']
+        ].sort_values(['chromosome', 'position'])
+
+        core_site_table.to_csv(f'{self.prefix}.tsv', sep='\t', index=False)
+
+        # Read the reference sequence used for alignment
+        ref = read_fasta(self.reference)
+
+        # For each sample insert the called variant / reference allele
+        # into the reference sequence, concatenate chromosomes and write
+        # to file:
+
+        self.logger.info(
+            f'Writing full core variant alignment to: {self.prefix}.full.aln'
+        )
+
+        with open(f'{self.prefix}.full.aln', 'w') as full_alignment:
+            for sample in samples:
+                seq_concat = sample.replace_variants(reference=ref)
+                full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
+
+            if include_reference:
+                ref_seq = ''.join(ref[key]for key in sorted(ref.keys()))
+                full_alignment.write(f'>Reference\n{ref_seq}\n')
+
+        # Use snp-sites to extract the final core variant site alignment
+        self.logger.info(
+            f'Writing single nucleotide polymorphism alignment to: {self.prefix}.aln'
+        )
+        run_cmd(
+            f'snp-sites -c -o {self.prefix}.aln {self.prefix}.full.aln'
+        )
+
+        self.logger.info(
+            f'Writing single nucleotide polymorphism data to: {self.prefix}.vcf'
+        )
+        run_cmd(
+            f'snp-sites -c -v -o {self.prefix}.vcf {self.prefix}.full.aln'
+        )
+
+        snp_count = sum(
+            [1 for _ in VariantFile(f'{self.prefix}.vcf').fetch()]
+        )
+        self.logger.info(
+            f'Final single nucleotide polymorphisms in alignment: {snp_count}'
+        )
+
+
+class Sample(PoreLogger):
+
+    """ Base class for Snippy, Medaka and Megalodon per sample variant calls """
+
+    def __init__(self, vcf: Path):
+
+        self.vcf = vcf
+        self.missing = 'N'
+
+        self.data = pandas.DataFrame()  # all sites
+        self.data_core = pandas.DataFrame()  # core sites only
+
+        # Stats
+        self.total = 0
+        self.filtered = 0
+        self.missingness = 0.
+
+        #  TODO: Use directory name of sample for now
+        self.name = vcf.parent.name
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format=f"[%(asctime)s] [{self.name}]     %(message)s",
+            datefmt='%H:%M:%S'
+        )
+
+        PoreLogger.__init__(self)
+
+    def get_snp_positions(self) -> dict:
+
+        """ Get SNP positions as dictionary of contigs - lists """
+
+        return {
+            chrom: data.position.tolist()
+            for chrom, data in self.data.groupby('chromosome')
+        }
+
+    def replace_variants(self, reference: dict) -> str:
+
+        """ Insert filtered (core site) variants into the reference sequence
+
+        :param reference: str chromosome: str sequence
+        :return: concatenated and variant-filled reference chromosome sequences
+        """
+
+        variant_reference_sequences = {}
+        for chromosome, data in self.data_core.groupby('chromosome'):
+            self.logger.debug(
+                f'Inserting core variant calls into: {self.name} - {chromosome}'
+            )
+
+            try:
+                seq = list(reference[chromosome])
+            except KeyError:
+                self.logger.error(
+                    f'Sequence {chromosome} not in reference'
+                )
+                raise
+
+            before = len(seq)
+
+            for i, row in data.iterrows():
+                position = row['position']
+                call = list(row['call'])
+
+                # Accounting for MNP and COMPLEX
+                # 1-based position to sequence list index
+                start_idx, end_idx = position-1, position-1+len(call)
+                self.logger.debug(
+                    f'Replacing: {position}, {seq[start_idx:end_idx]}, '
+                    f'{call}, {start_idx}, {end_idx}'
+                )
+                seq[start_idx:end_idx] = call
+
+            after = len(seq)
+
+            # Make sure nothing dodgy happens during inserts
+            try:
+                assert before == after
+            except AssertionError:
+                self.logger.error(
+                    'Something super dodgy happened during reference insertion'
+                )
+                raise
+
+            variant_reference_sequences[chromosome] = "".join(seq)
+
+        # Concatenate chromosomes and return as single sequence for snp-sites
+        return ''.join(
+            variant_reference_sequences[key]
+            for key in sorted(variant_reference_sequences.keys())
+        )
+
+
+class SnippySample(Sample):
+
+    """ Snippy samples are called de novo from Illumina """
+
+    def __init__(
+        self,
+        vcf: Path,
+        aligned: Path = None,
+    ):
+
+        Sample.__init__(self, vcf=vcf)
+
+        self.aligned = aligned
+        if self.aligned:
+            self.excluded_positions: dict = self.get_excluded_positions()
+
+        self.logger.debug(f'Processing Snippy variant calls: {self.vcf}')
+        self.parse()
+
+    def parse(self):
+
+        var = 0
+        total = 0
+        calls = []
+        for rec in VariantFile(self.vcf).fetch():
+
+            total += 1
+
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts  # tuple
+            qual = float(rec.qual)
+
+            info = rec.info
+            if 'snp' in info['TYPE'] \
+                or 'mnp' in info['TYPE'] \
+                    or 'complex' in info['TYPE']:
+
+                # Snippy output VCFs only have variant sites: GT = 1/1
+                try:
+                    call = variants[0]
+                except IndexError:
+                    self.logger.debug(
+                        f'Could not detect alts for variant in '
+                        f'file {self.vcf} - position {position}'
+                    )
+                    raise
+
+                # Check if COMPLEX type reference allele length is
+                # the same length as called variant allele, if not
+                # it should not be included (INDEL)
+
+                # Only applies to COMPLEX, not SNP or MNP
+                if len(call) != len(reference):
+                    continue
+
+                calls.append(dict(
+                    chromosome=chromosome,
+                    position=position,
+                    call=call,
+                    ref=reference,
+                    alt=call,
+                    quality=qual,
+                    snp=True if 'snp' in info['TYPE'] else False
+                ))
+
+                var += 1
+
+        self.data = pandas.DataFrame(calls).sort_values(
+            ['chromosome', 'position']
+        )
+
+    def get_excluded_positions(self):
+
+        """ Get excluded positions based on aligned reference sequence """
+
+        aligned_reference = read_fasta(self.aligned)
+
+        excluded = {}
+        for chrom, seq in aligned_reference.items():
+            # List of positions containing gaps (-) or
+            # regions of low coverage (N) determined by Snippy
+            excluded[chrom] = [
+                i for i, s in enumerate(seq, 1) if s == 'N' or s == '-'  # TODO: fix here not in ATCG
+            ]  # 1-based indexing of sites to match VCF
+
+        return excluded
+
+
+class MedakaSample(Sample):
+
+    """ Medaka samples are called de novo from ONT """
+
+    def __init__(
+        self,
+        vcf: Path,
+        bam: Path = None,
+        min_depth: int = 10,
+    ):
+
+        Sample.__init__(self, vcf=vcf)
+
+        self.bam = bam
+        self.min_depth = min_depth
+
+        # Filter reference sequence by depth
+        if bam:
+            self.excluded_positions: dict = self.get_excluded_positions()
+
+        self.logger.debug(f'Processing Medaka variant calls: {self.name}')
+        self.parse()
+
+    def parse(self):
+
+        var = 0
+        total = 0
+        calls = []
+        for rec in VariantFile(self.vcf).fetch():
+
+            total += 1
+
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts  # tuple
+            qual = float(rec.qual)
+
+            # Medaka output VCFs only have variant sites: GT = 1/1
+            try:
+                call = variants[0]
+            except IndexError:
+                self.logger.debug(
+                    f'Could not detect alts for variant in '
+                    f'file {self.vcf} - position {position}'
+                )
+                raise
+
+            calls.append(dict(
+                position=position,
+                call=call,
+                ref=reference,
+                alt=call,
+                chromosome=chromosome,
+                quality=qual
+            ))
+
+            var += 1
+
+        self.data = pandas.DataFrame(calls).sort_values(
+            ['chromosome', 'position']
+        )
+
+    def filter(self, min_quality: int = 30):
+
+        self.data.loc[
+            (self.data['quality'] < min_quality), 'call'
+        ] = self.missing
+
+        filtered = self.data.loc[
+            self.data['call'] == self.missing
+        ]
+
+        self.filtered = len(filtered)
+        self.total = len(self.data)
+        self.missingness = self.filtered / self.total
+
+        self.logger.debug(
+            f'Filtered {len(filtered)}/{len(self.data)} < Q{min_quality} '
+            f'({round(self.missingness*100, 4)}%) - '
+            f'keeping: {len(self.data) - len(filtered)}'
+        )
+
+        self.data = self.data[
+            self.data['call'] != self.missing
+        ]
+
+        self.data = self.data.sort_values(
+            ['chromosome', 'position']
+        )  # make sure it's sorted
+
+    def get_excluded_positions(self) -> dict:
+
+        """ Assess missing and excluded sites from Medaka read alignment
+
+        Analogous to the {id}.aligned.fa created by Snippy
+        where missing sites (depth = 0) are gapped (-) and
+        sites with low coverage are replaced with missing (N)
+
+        Dependency: samtools depth
+
+        returns: dictionary with str chrom: list of excluded sites
+        """
+
+        self.logger.info(
+            f'Core site assessment for sample: {self.name}'
+        )
+
+        run_cmd(
+            f'samtools depth -a {self.bam} > {self.name}.depth.txt', shell=True
+        )  # Include all sites with zero read depth
+
+        depth = pandas.read_csv(
+            f'{self.name}.depth.txt', sep='\t', header=None,
+            names=['chromosome', 'position', 'depth']
+        )
+
+        self.logger.debug(
+            f'Determining excluded positions for sample: {self.name}'
+        )
+
+        excluded = {}
+        for chrom, data in depth.groupby('chromosome'):
+
+            # Get positions where depth is 0 or < min_depth
+            unsupported = data[
+                (data['depth'] == 0) | (data['depth'] < self.min_depth)
+            ]
+            excluded[chrom] = unsupported.position.tolist()
+            self.logger.debug(
+                f'Found {len(unsupported)} unsupported positions on {chrom}'
+            )
+
+        Path(f'{self.name}.depth.txt').unlink()
+
+        return excluded
+
+
+class MegalodonSample(Sample):
+
+    """ Megalodon samples are called from candidate SNPs detected with Snippy """
+
+    def __init__(self, vcf: Path):
+        Sample.__init__(self, vcf=vcf)
+
+        self.logger.info(f'Processing Megalodon variant calls:: {self.name}')
+        self.parse()
+
+    def parse(self):
+
+        var = 0
+        calls = []
+        for rec in VariantFile(self.vcf).fetch():
+
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts  # tuple
+
+            sample = rec.samples['SAMPLE']
+
+            depth = int(sample['DP'])
+            quality = int(sample['GQ'])  # haploid, not normalized
+
+            # Megalodon output VCFs can have reference or variant sites
+            try:
+                genotype = sample['GT'][0]  # tuple, but only one entry
+            except IndexError:
+                raise IndexError(f'Error parsing GT: {chromosome} - {position}')
+
+            if genotype > 0:
+                # Variant called
+                try:
+                    variant = variants[genotype - 1]
+                except IndexError:
+                    raise IndexError(f'Error parsing ALT: {chromosome} - {position}')
+
+                self.logger.debug(
+                    f'Detected variant: {variant}/{reference} - {position}'
+                    f' - {depth} - {quality}'
+                )
+
+                var += 1
+                call = variant
+                alt = variant
+                is_variant = True
+            else:
+                call = reference
+                alt = '-'
+                is_variant = False
+
+            calls.append(dict(
+                position=position,
+                call=call,
+                ref=reference,
+                alt=alt,
+                chromosome=chromosome,
+                read_depth=depth,
+                quality=quality,
+                is_variant=is_variant
+            ))
+
+        self.data = pandas.DataFrame(calls).sort_values('position')
+
+        self.logger.info(
+            f'Detected {var} SNPs called by Megalodon'
+        )
+
+    def filter(self, min_depth: int = 10, min_quality: int = 30):
+
+        self.data_core = self.data.copy()
+
+        self.data_core.loc[
+            (self.data_core['read_depth'] < min_depth) |
+            (self.data_core['quality'] < min_quality),
+            'call'
+        ] = self.missing
+
+        filtered = self.data_core.loc[
+            self.data_core['call'] == self.missing
+            ]
+
+        filtered_variants = filtered[filtered['is_variant'] == True]
+        filtered_references = filtered[filtered['is_variant'] == False]
+
+        self.logger.info(
+            f'Filtered {len(filtered)} / {len(self.data_core)} calls --> '
+            f'{len(filtered_variants)} variants, {len(filtered_references)} '
+            f'reference'
+        )
+
+        self.filtered = len(filtered)
+        self.total = len(self.data_core)
+        self.missingness = self.filtered / self.total
+
+        self.logger.info(
+            f'Missing rate after filtering: {round(self.missingness, 4)}'
+        )
+
+        self.data_core = self.data_core.sort_values(
+            ['chromosome', 'position']
+        )  # make sure it's sorted
+
+    def fill_candidates(self, variants: pandas.DataFrame):
+
+        """ Compare core variants from Snippy to this sample and fill missing """
+
+        if self.data_core.empty:
+            raise ValueError('Megalodon variants must first be filtered')
+
+        # Works only if the dataframes do not contain duplicates themselves
+        # which is always the case here:
+
+        missing = pandas.concat([self.data_core, variants])\
+            .drop_duplicates(subset=['chromosome', 'position'], keep=False)
+
+        missing['call'] = [self.missing for _ in range(len(missing))]
+
+        # Introduces NA into DataFrame!
+        self.data_core = pandas.concat([self.data_core, missing])\
+            .sort_values(['chromosome', 'position']).reset_index(drop=True)
+
+        # Update stats
+        self.total = len(self.data_core)
+        self.filtered = len(
+            self.data_core.loc[self.data_core['call'] == self.missing]
+        )
+        self.missingness = self.filtered / self.total
+
+    def get_fasta_entry(self) -> str:
+
+        header = f">{self.name}"
+        seq = "".join(self.data_core.call)
+
+        return f'{header}\n{seq}\n'
+
+    def get_genotype(self) -> list:
+
+        return self.data_core.call.to_list()
+
+
+class SnippyAnnotator:
+
+    """ Annotate SNPs using a reference genome and VCF from Snippy """
+
+    def __init__(self, reference: Path, vcf: Path = None, gubbins: bool = False):
+
+        """
+
+        :param reference: reference genome with coding region annotations (GBK)
+        :param vcf: VCF file from Snippy-Core or Gubbins
+        :param gubbins: indicate whether VCF file is from Gubbins
+            If true, removes all variants that contain any other site than
+
+        """
+
+        self.reference = reference
+        self.vcf = vcf
+
+    def find_branching(self, nexus: Path, nodes: str or list):
+
+        """ Annotate branching SNPs from Treetime
+
+        :param nexus: path to tree file with mutation annotations from Treetime
+        :param nodes: node or list of nodes to extract mutations to annotate
+
+        """
+
+        if isinstance(nodes, str):
+            nodes = [nodes]
+
+        tree = dendropy.Tree.get(
+            file=nexus.open(), schema="nexus", preserve_underscores=True
+        )
+
+        for n in tree.preorder_node_iter():
+            if n.label in nodes:
+                s = ""
+                for a in n.annotations:
+                    # Timetree has some weirdannotation parsing,
+                    # so merge into string and extract mutations
+                    s += a.name + a.value + ","
+
+                mutations = s[s.find('"')+1:s.rfind('"')].split(',')
+                print(mutations)
 
 
 class AssemblyProcessor(PoreLogger):
