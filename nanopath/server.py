@@ -1,7 +1,7 @@
 from jinja2 import Template, Environment, FileSystemLoader
 from weasyprint import HTML
 
-from nanopath.pipelines import PathogenPipeline
+from nanopath.pipelines import PathogenPipeline, SignalPipeline
 from nanopath.utils import PoreLogger
 import datetime
 from pathlib import Path
@@ -15,16 +15,20 @@ import yaml
 
 class AppServer(PoreLogger):
 
-    def __init__(self, pathogen_path: Path):
+    def __init__(self, pathogen_path: Path = None, signal_path: Path = None):
 
         PoreLogger.__init__(self, level=logging.INFO, name="AppServer")
 
         self.pipelines = {}
 
         self.pathogen_path = pathogen_path
+        self.signal_path = signal_path
 
         if self.pathogen_path:
             self.pipelines['pathogen'] = PathogenPipeline()
+
+        if self.signal_path:
+            self.pipelines['signal'] = SignalPipeline()
 
         pass
 

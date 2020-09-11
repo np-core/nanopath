@@ -1407,9 +1407,24 @@ class AssemblyPipeline(PoreLogger):
         return nanoq.merge(coverm, on='name', how='inner')
 
 
+class SignalPipeline(PoreLogger):
+
+    def __init__(self, workdir: Path = Path("/tmp/.signal_work")):
+
+        PoreLogger.__init__(self, level=logging.INFO, name="SignalPipeline")
+
+        self.workdir = workdir
+        self.workdir.mkdir(parents=True, exist_ok=True)
+
+    def clean(self):
+
+         shutil.rmtree(self.workdir)
+
+
+
 class PathogenPipeline(PoreLogger):
 
-    def __init__(self, workdir: Path = Path(".pathogen_work")):
+    def __init__(self, workdir: Path = Path("/tmp/.pathogen_work")):
 
         PoreLogger.__init__(self, level=logging.INFO, name="PathogenPipeline")
 
