@@ -136,7 +136,7 @@ const sleep = (milliseconds) => {
 }
 
 export default {
-  name: 'Dashboard',
+  name: 'Pathogen',
   data() {
     return {
       config: {

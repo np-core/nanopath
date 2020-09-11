@@ -39,7 +39,7 @@ setup(
     ],
     entry_points="""
         [console_scripts]
-        np=nanopath.terminal.cli:terminal_client
+        npc=nanopath.terminal.cli:terminal_client
         nanopath=nanopath.terminal.cli:terminal_client
     """,
     version="0.1",

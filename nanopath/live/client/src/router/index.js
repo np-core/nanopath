@@ -1,6 +1,8 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import Dashboard from '@/components/Dashboard'
+import Pathogen from '@/components/Pathogen'
+import Signal from '@/components/Signal'
+
 
 Vue.use(Router);
 
@@ -12,13 +14,18 @@ const router = new Router({
     },
     {
         path: '/',
-        redirect: '/dashboard',
+        redirect: '/pathogen',
     },
     {
-        path: '/dashboard',
-        name: 'Dashboard',
-        component: Dashboard,
+        path: '/pathogen',
+        name: 'Pathogen',
+        component: Pathogen,
     },
+    {
+      path: '/signal',
+      name: 'Signal',
+      component: Signal,
+  },
   ],
   mode: 'history'
 });
