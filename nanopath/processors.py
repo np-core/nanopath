@@ -14,8 +14,12 @@ from nanopath.utils import create_fastx_index, run_cmd, PoreLogger
 
 import dendropy
 
-from pysam import VariantFile
 import pyfastx
+
+try:
+    from pysam import VariantFile
+except ModuleNotFoundError:
+    pass # windows
 
 
 def read_fasta(fasta: Path) -> dict:

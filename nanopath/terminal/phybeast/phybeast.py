@@ -1,13 +1,12 @@
 import click
 
 from .utils import utils
-from .beastling import beastling
 from .call_medaka import call_medaka
 from .call_megalodon import call_megalodon
 from .snp_distance import snp_distance
 from .snp_difference import snp_difference
 
-VERSION = "0.1"
+VERSION = "1"
 
 
 @click.group()
@@ -24,4 +23,3 @@ phybeast.add_command(snp_distance)
 phybeast.add_command(call_megalodon)
 phybeast.add_command(call_medaka)
 phybeast.add_command(utils)
-phybeast.add_command(beastling)

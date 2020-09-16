@@ -1,13 +1,17 @@
 import subprocess
 import dendropy
 import pandas
-import pysam
 import shlex
 import sys
 import os
 
 from random import shuffle
 from pathlib import Path
+
+try:
+    import pysam
+except ModuleNotFoundError:
+    pass  # windows
 
 
 def run_cmd(cmd, callback=None, watch=False, background=False, shell=False):

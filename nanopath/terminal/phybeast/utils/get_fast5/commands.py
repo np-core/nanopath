@@ -1,8 +1,12 @@
 import click
-import pysam
 
 from pathlib import Path
-from ont_fast5_api.multi_fast5 import MultiFast5File
+
+try:
+    import pysam
+except ModuleNotFoundError:
+    pass
+
 
 @click.command()
 @click.option(

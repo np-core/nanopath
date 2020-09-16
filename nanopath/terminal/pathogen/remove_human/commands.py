@@ -1,10 +1,13 @@
 import click
-import sys
 import logging
-import mappy as mp
 
 from pathlib import Path
 from nanopath.utils import smart_open, PoreLogger
+
+try:
+    import mappy as mp
+except ModuleNotFoundError:
+    pass  # windows
 
 
 @click.command()

@@ -78,7 +78,7 @@ def date_random_test(
 
         fig.savefig(outdir / "date_randomisation_test.png")
     else:
-        # We use a while counter to create successful runs until the replicate limit
+        # We use a while counter to list successful runs until the replicate limit
         date_replicates = []
         rate_replicates = []
         while reps < replicates:

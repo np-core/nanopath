@@ -1,0 +1,1 @@
+from .beastling import beastling

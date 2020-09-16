@@ -1,17 +1,13 @@
 import subprocess
 import shlex
-import sys
 import logging
 import pyfastx
 import random
 import jinja2
 
 import sys
-import contextlib
 
 from pathlib import Path
-from pysam import AlignmentFile, FastxFile
-
 
 
 class PoreLogger:
@@ -44,31 +40,10 @@ def get_output_handle(fpath: str, fastx: bool = False, out: bool = True):
             )
 
         if fastx:
-            handle = FastxFile(p)
-        else:
-            handle = p.open("w")
-
-    return handle
-
-
-def get_output_handle(fpath: str, fastx: bool = False, out: bool = True):
-
-    if fpath == "-":
-        if out:
-            handle = sys.stdout
-        else:
-            handle = sys.stdin
-    else:
-        p = Path(fpath)
-        if not p.parent.is_dir():
-            raise NotADirectoryError(
-                "Directory specified for output file does not exist: {}".format(
-                    p.parent
-                )
-            )
-
-        if fastx:
-            handle = FastxFile(p)
+            if fpath.endswith("a"):
+                handle = pyfastx.Fasta(p)
+            else:
+                handle = pyfastx.Fastq(p)
         else:
             handle = p.open("w")
 

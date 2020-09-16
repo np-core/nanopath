@@ -35,10 +35,12 @@ setup(
         "pyyaml",
         "phylo-treetime",
         "ont_fast5_api",
-        "weasyprint"
+        "weasyprint",
+        "requests"
     ],
     entry_points="""
         [console_scripts]
+        np=nanopath.terminal.cli:terminal_client
         npc=nanopath.terminal.cli:terminal_client
         nanopath=nanopath.terminal.cli:terminal_client
     """,

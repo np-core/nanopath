@@ -10,8 +10,6 @@ from .remove_reference import remove_reference
 from .date_random_test import date_random_test
 from .prepare_metadata import prepare_metadata
 from .remove_invariant import remove_invariant
-from .plot_date_randomisation import plot_date_randomisation
-
 VERSION = '0.1'
 
 
@@ -33,5 +31,4 @@ utils.add_command(extract_rate)
 utils.add_command(remove_reference)
 utils.add_command(date_random_test)
 utils.add_command(prepare_metadata)
-utils.add_command(plot_date_randomisation)
 utils.add_command(remove_invariant)

@@ -1,0 +1,19 @@
+name: datatest
+collection: tests
+version: 1
+description: This is a test dataset
+author: Eike Steinig
+date: 20/20/2020
+license: MIT
+data:
+  -   name: test_file_collection.tar
+      version: 1
+      description: A tarred collection of files to reduce number of files
+  -   name: test_file.fq.gz
+      version: 1
+      desciption: ONT read files, RBK-004, R9.4.1, Guppy v4, HAC model
+  -   name: test_meta.tsv
+      version: 1
+      description: Meta data file for files in this dataset
+
+

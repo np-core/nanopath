@@ -1,55 +1,21 @@
-""" All things related to running the server and dashboard online
-
-Essential steps, always on barcoded libraries (RBK004 etc.)
-
-Prep:
-
-- read config file for remote or local server (mem, gpu)
-- attempt to connect and check server setups:
-
-        - Nextflow is installed and can be executed
-        - Pipelines and server configurations are available
-
-- launch pipelines on server, return PID
-- launch a watchdog per server that periodically checks for pipeline outputs
-
-Online run (GPU basecalling)
-================
-
-- launch a local watchdog on Fast5 files in run directory (recurse)
-    - copy / symlink into input directory of signal pipeline
-- launch a local watchdog on barcode Fastq files in signal output directory
-    - copy / symlink into input directory of pathogen pipeline
-
-Online or finished run(MinKNOW basecalling)
-=======================
-
-- launch a local watchdog on barcoded Fastq files in run directory (recurse)
-    - copy / symlink into input directory of pathogen pipeline
-
-- once output is detected in pathogen pipeline,
-  pull the files over to local and process in NanoPath for Dashboard
-
-
-"""
+""" All things related to running the server and dashboard online """
 
 import os
 import uuid
-import pandas
-import shlex
 import time
 import shutil
 import subprocess
 import yaml
 import logging
+from distutils.dir_util import copy_tree
 
 from datetime import datetime
-from paramiko import SSHClient, AutoAddPolicy, RSAKey
-from paramiko.ssh_exception import AuthenticationException, SSHException, BadHostKeyException
+from paramiko import SSHClient, AutoAddPolicy
+from paramiko.ssh_exception import AuthenticationException, SSHException
 
 from colorama import Fore
 
-from nanopath.utils import PoreLogger, run_cmd
+from nanopath.utils import PoreLogger
 from pathlib import Path, PosixPath
 
 R = Fore.RED
@@ -64,22 +30,20 @@ class ClientError(Exception):
     pass
 
 
-class NanoPathClient(PoreLogger):
+class NetflowClient(PoreLogger):
 
-    def __init__(self, server_config: Path, workdir: Path):
+    def __init__(self, node_config: Path, workdir: Path):
 
         PoreLogger.__init__(self, level=logging.INFO, name='NanoPathClient')
 
         logging.getLogger("paramiko").setLevel(logging.WARNING)
 
         self.logger.info(
-            f"{Y}Welcome to the {M}NanoPathClient{RE}"
+            f"{Y}NanoPathClient{RE}"
         )
 
-        self.nextflow_version = 20.07
-
-        # Read the client configurations
-        self.config = self.read_config(file=server_config)
+        # Read the netflow configurations
+        self.config = self.read_config(file=node_config)
 
         # Working directory structure
         self.workdir = workdir
@@ -89,20 +53,46 @@ class NanoPathClient(PoreLogger):
         # Store the clients for later use:
         self.clients = {}
 
-    def configure_clients(self):
+    def configure_storage_nodes(self, client_entry: str = 'storage'):
+
+        self.logger.info(f'Start storage node configuration')
+        for node, config in self.config[client_entry].items():
+            ssh_key = config['ssh_key']
+            key_path = os.path.expanduser(ssh_key)
+
+            client = StorageClient(
+                name=node,
+                host=str(config['host']),
+                user=str(config['user']),
+                ssh_key=os.path.abspath(key_path),
+                storage_path=str(config['storage_path'])
+            )
+
+            # Storage setup and execution check
+            client.check_storage_node()
+
+            self.clients[node] = client
+
+            self.logger.info(
+                f'{Y}Node {C}{node}{Y} configured ({C}{client.host}{Y}){RE}'
+            )
+
+        self.logger.info(
+            f'Storage node configuration complete'
+        )
+
+    def configure_pipeline_nodes(self, client_entry: str = 'nodes'):
 
         """ Checks for server configurations and connections """
 
-        self.logger.info(f'Pipeline client configuration')
-        for server, config in self.config['servers'].items():
-
-            # Pipeline client init
+        self.logger.info(f'Starting pipeline node configuration')
+        for node, config in self.config[client_entry].items():
             ssh_key = config['ssh_key']
             key_path = os.path.expanduser(ssh_key)
 
             client = PipelineClient(
-                name=server,
-                nexus=self.nexus / server,  # path to result and data hub on main
+                name=node,
+                nexus=self.nexus / node,  # path to result and data hub on main
                 host=str(config['host']),
                 user=str(config['user']),
                 nextflow=PosixPath(config['nextflow']),
@@ -115,33 +105,33 @@ class NanoPathClient(PoreLogger):
             )
 
             self.logger.info(
-                f'{Y}Checks started:  {C}{server}{RE}'
+                f'{Y}Checks started:  {C}{node}{RE}'
             )
             # Remote server connection check
             client.test_connection()
             # Nextflow execution and version check
             client.check_nextflow_version()
             # Pipeline setup and execution check
-            client.check_pipeline_server(server=server)
+            client.check_pipeline_node(server=node)
 
             self.logger.info(
-                f'{Y}Checks complete: {C}{server}{RE}'
+                f'{Y}Checks complete for node: {C}{node}{RE}'
             )
 
             # Create the corresponding result data hub on main host
-            (self.nexus / server / 'results').mkdir(parents=True, exist_ok=True)
+            (self.nexus / node / 'results').mkdir(parents=True, exist_ok=True)
             self.logger.info(
-                f'{Y}Client data nexus: {G}{self.nexus / server}{RE}'
+                f'{Y}Client node data nexus on local host: {G}{self.nexus / node}{RE}'
             )
 
-            self.clients[server] = client
+            self.clients[node] = client
 
             self.logger.info(
-                f'{C}{server}{RE} {G}configured{RE} ({C}{client.host}{RE})'
+                f'{G}Node {C}{node}{RE} {G}configured{RE} ({C}{client.host}{RE})'
             )
 
         self.logger.info(
-            f'Pre-launch configuration complete'
+            f'Pipeline node configuration complete'
         )
 
     def launch_pipelines(
@@ -178,7 +168,7 @@ class NanoPathClient(PoreLogger):
                 fastq_client = self.clients['fastq']
             except KeyError:
                 self.logger.error(
-                    f"{R}Could not detect configured client, did you call "
+                    f"{R}Could not detect configured netflow, did you call "
                     f"configure_server_clients() first?{RE}"
                 )
                 raise
@@ -228,7 +218,7 @@ class NanoPathClient(PoreLogger):
         print()  # Ctrl+C offset ugly
         for server, client in self.clients.items():
             self.logger.info(
-                f'{Y}Stopping operations on client{RE}: '
+                f'{Y}Stopping operations on netflow{RE}: '
                 f'{C}{server}{RE} ({C}{client.host}{RE})'
             )
             for name in client.active_screens.keys():
@@ -240,7 +230,7 @@ class NanoPathClient(PoreLogger):
             shutil.rmtree(self.workdir)
 
         self.logger.info(
-            f'{RE}Server and client clean-up complete '
+            f'{RE}Server and netflow clean-up complete '
             f'{f"({R}NUKED{RE})" if nuke else ""}{RE}'
         )
 
@@ -256,10 +246,10 @@ class NanoPathClient(PoreLogger):
         # Check the server configuration
 
         try:
-            server_config = config['servers']
+            server_config = config['nodes']
         except KeyError:
             self.logger.error(
-                "Could not detect required entry 'servers' in configuration"
+                "Could not detect required entry 'nodes' in configuration"
             )
             raise
 
@@ -274,54 +264,23 @@ class NanoPathClient(PoreLogger):
         return
 
 
-class PipelineClient(PoreLogger):
-    """Client to interact with a local or remote host via SSH & SCP."""
-    def __init__(
-        self,
-        nexus: Path,
-        name: str,
-        host: str,
-        user: str,
-        ssh_key: str,
-        nextflow: PosixPath,
-        pipeline: str,
-        profile: str,
-        container: str,
-        workdir: PosixPath,
-        params: dict,
-    ):
-        PoreLogger.__init__(self, level=logging.INFO, name='PipelineClient')
+class Client(PoreLogger):
 
-        self.nexus = nexus  # Path to main host hub for this pipeline client
-        self.name = name
+    def __init__(self, host, user, ssh_key, name, logger_name: str = 'PipelineClient'):
+
+        PoreLogger.__init__(self, level=logging.INFO, name=logger_name)
 
         self.remote = True if host != 'local' else False
-
-        self.nextflow_version = 20.07
-        self.basedir = "$HOME/.nanopath/pipelines"
+        self.name = name
 
         self.host = host
         self.user = user
         self.ssh_key = ssh_key
 
-        self.nextflow = nextflow
-        self.container = container
-        self.pipeline = pipeline
-        self.profile = profile
-        self.workdir = workdir
-
-        self.params = params
-
         self.client = None
         self.sftp = None
         self.conn = None
 
-        self.file_input = self.workdir / 'files'
-        self.file_output = self.workdir / 'results'
-
-        self.nexus_results = self.nexus / 'results'  # mirrored hub results
-
-        # Keep a registry of active screens and commands executed
         self.active_screens = {}
 
     def _connect(self):
@@ -353,10 +312,6 @@ class PipelineClient(PoreLogger):
                 else:
                     self.logger.info('SFTP unable to establish SSH connection')
                 return
-            except BadHostKeyException as e:
-                self.logger.error("Unable to verify server's host key: " + str(e))
-                self.logger.info("SFTP Unable to verify server's host key")
-                return
             except Exception as e:
                 self.logger.error('Exception signing in to SFTP server: ' + str(e))
                 self.logger.info('SFTP exception signing in')
@@ -370,6 +325,7 @@ class PipelineClient(PoreLogger):
         remote_path: str,
         symlink: bool = True,
     ) -> str or None:
+
         """ Upload a single file to a remote directory or copy to local """
 
         file = os.path.realpath(file)  # always local, but resolve symlinks
@@ -507,125 +463,13 @@ class PipelineClient(PoreLogger):
             try:
                 self._connect()
             except SSHException as error:
-                self.logger.error('Could not connect to remote client')
+                self.logger.error('Could not connect to remote Netflow')
                 raise error
 
             self.disconnect()
         else:
             self.logger.info('Using local shell commands')
             return
-
-    def check_nextflow_version(self) -> float:
-
-        out = self.execute_cmd(f"{self.nextflow} -v")
-
-        if not out:
-            self.logger.error(
-                f'{R}Could not detect Nextflow - '
-                f'did you setup the server correctly?{RE}'
-            )
-            exit(1)
-
-        try:
-            response = out[0]
-            version_str = response.split()[2]
-            major_version = ".".join(version_str.split('.')[:2])
-            version = float(major_version)
-        except (KeyError, ValueError):
-            self.logger.error('Could not extract Nextflow version')
-            raise
-
-        if version < self.nextflow_version:
-            raise ClientError(
-                f'Nextflow version must be >= {self.nextflow_version}'
-            )
-        else:
-            self.logger.info(f'Nextflow version is: {G}v{version}{RE}')
-
-        return version
-
-    def check_pipeline_server(self, server: str):
-
-        # Are screens working?
-
-        out = self.execute_cmd(f'screen -v && echo "1"')
-        if not out:
-            self.logger.info(
-                f'{R}Could not detect screen utility on server{RE} - '
-                f'did you run the server setup on {R}{server}{RE}?'
-            )
-            exit(1)
-        else:
-            self.logger.info('Screens are working on server')
-
-        # Is the pipeline base directory present?
-
-        out = self.execute_cmd(f'[ -d "{self.basedir}" ] && echo "1"')
-
-        if not out:
-            self.logger.info(
-                f'{R}Could not detect pipeline directory{RE} - '
-                f'did you run the server setup on {R}{server}{RE}?'
-            )
-            exit(1)
-
-        # Is the selected pipeline present?
-
-        pipeline_file = Path(self.basedir) / self.pipeline
-        out = self.execute_cmd(f'[ -f "{pipeline_file}.nf" ] && echo "1"')
-
-        if not out:
-            self.logger.info(
-                f'{R}Could not detect pipeline in directory{RE} - '
-                f'did you run the server setup on {R}{server}{RE}?'
-            )
-            exit(1)
-
-        self.logger.info(
-            f'Pipeline: {G}{self.pipeline}.nf{RE}'
-        )
-        self.logger.info(
-            f'Pipeline profile: {G}{self.profile}{RE}'
-        )
-        self.logger.info(
-            f'Working directory: {G}{self.workdir}{RE}'
-        )
-
-        # Is the working directory present? If not create it
-
-        out = self.execute_cmd(f'[ -d "{self.workdir}" ] && echo "1"')
-
-        if not out:
-            self.logger.info(
-                f'Could not detect working directory: {self.workdir}'
-            )
-            self.logger.info(
-                f'Create working directory: {self.workdir}'
-            )
-            out = self.execute_cmd(f'mkdir -p {self.workdir} && echo "1"')
-            if not out:
-                self.logger.info(
-                    f'{R}Could not create working directory: {self.workdir}{RE}'
-                )
-                exit(1)
-
-        # Is the file input directory present? If not create it
-
-        out = self.execute_cmd(f'[ -d "{self.file_input}" ] && echo "1"')
-
-        if not out:
-            self.logger.info(
-                f'Could not detect file input directory: {self.file_input}'
-            )
-            self.logger.info(
-                f'Create file input directory: {self.file_input}'
-            )
-            out = self.execute_cmd(f'mkdir -p {self.file_input} && echo "1"')
-            if not out:
-                self.logger.info(
-                    f'{R}Could not create file input directory: {self.file_input}{RE}'
-                )
-                exit(1)
 
     def upload_files(
         self,
@@ -640,7 +484,7 @@ class PipelineClient(PoreLogger):
             files = [files]
 
         if self.remote:
-            self.conn = self._connect() # use only when remote
+            self.conn = self._connect()  # use only when remote
 
         try:
             for file in files:
@@ -688,6 +532,357 @@ class PipelineClient(PoreLogger):
             raise
         finally:
             self.disconnect()
+
+    def kill_screen(self, grep: str = "np_"):
+
+        kill_command = f"screen -ls | grep '{grep}' | cut -d. -f1 | xargs kill"
+        self.execute_cmd(cmd=kill_command)
+        self.logger.debug(
+            f"Removed screens with grep: {grep}"
+        )
+
+
+class StorageClient(Client):
+
+    """ Less complex variant of the SSH client manager for Netflow adapted for data storage """
+
+    def __init__(self, host, user, ssh_key, name, storage_path):
+
+        Client.__init__(self, host, user, ssh_key, name, logger_name='StorageClient')
+
+        self.storage_path = storage_path
+
+    def check_storage_node(self):
+
+        # Is the storage base directory present?
+
+        out = self.execute_cmd(f'[ -d "{self.storage_path}" ] && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'{R}Could not detect storage directory{RE}'
+            )
+            out = self.execute_cmd(f'mkdir -p {self.storage_path} && echo "1"')
+            if not out:
+                self.logger.info(
+                    f'{R}Could not create working storage directory: {self.storage_path}{RE}'
+                )
+                exit(1)
+            self.logger.info(
+                f'{Y}Created storage directory: {G}{self.storage_path}{RE}'
+            )
+        else:
+            self.logger.debug(f'Data storage directory found on server: {self.storage_path}')
+
+    def list_storage(self):
+
+        self.logger.info(f"Listing datasets on node: {self.name}")
+
+        if not self.conn:
+            self.conn = self._connect()
+
+        results = self.execute_cmd(f'find {self.storage_path} -type d -maxdepth 1')
+
+        if results:
+            try:
+                for storage_directory in results[1:]:
+                    try:
+                        name = storage_directory.split('/')[-1]
+                        self.logger.info(f'{C}{name}{RE}')
+                    except IndexError:
+                        self.logger.info('Could not execute listing on storage node')
+            except IndexError:
+                self.logger.info('Could not execute listing on storage node')
+        else:
+            self.logger.info('Could not execute listing on sotrage node')
+
+        self.disconnect()
+
+    def inspect_dataset(self, dataset: str):
+
+        self.logger.info(f"Inspect dataset {dataset} on node: {self.name}")
+
+        if not self.conn:
+            self.conn = self._connect()
+
+        dataset_storage_path = f"{self.storage_path}/{dataset}"
+
+        out = self.execute_cmd(f'[ -d "{dataset_storage_path}" ] && echo "1"')
+        if not out:
+            self.logger.info(
+                f'{R}Could not detect dataset directory in storage at: {dataset_storage_path}{RE}'
+            )
+            exit(1)
+        else:
+            dataset_meta_file = f"{dataset_storage_path}/dataset.yaml"
+            out1 = self.execute_cmd(f'[ -f "{dataset_meta_file}" ] && echo "1"')
+            if not out1:
+                self.logger.info(
+                    f'{R}Could not detect dataset meta data in storage at: {dataset_meta_file}{RE}'
+                )
+                exit(1)
+            else:
+                out2 = self.execute_cmd(f'grep -e "^date:" -e "^description:" {dataset_meta_file}')
+                out3 = self.execute_cmd(f'du -sh {dataset_storage_path}')
+                try:
+                    size = out3[0].split()[0]
+                    date = out2[0].replace("date: ", "")
+                    description = out2[1].replace("description: ", "")
+                    self.logger.info(
+                        f'{Y}name: {C}{dataset} {Y}date: {C}{date} '
+                        f'{Y}size: {C}{size} {Y}description: {C}{description}{RE}'
+                    )
+                except IndexError:
+                    self.logger.info(
+                        f'{R}Could not get meta data from: {dataset_meta_file}{RE}'
+                    )
+
+        self.disconnect()
+
+    def download_dataset_directory(self, dataset: str, outdir: Path):
+
+        """ Mirror / download a dataset directory recursively from remote """
+
+        remote_directory = f"{self.storage_path}/{dataset}"
+
+        if self.remote:
+            self.conn = self._connect()  # use only when remote
+
+            if not self.conn:
+                self.logger.error(
+                    f'{R}Could not download directory: no connection{RE}'
+                )
+                return
+
+            self.logger.info(f'Create local directory {outdir}')
+            outdir.mkdir(parents=True, exist_ok=True)
+
+            for fpath in self.sftp.listdir(path=remote_directory):
+                local_file = os.path.join(str(outdir), fpath)
+                try:
+                    self.sftp.get(
+                        remotepath=f"{remote_directory}/{fpath}", localpath=local_file
+                    )
+                except SSHException:  # TODO: is this exception correct for SFTP?
+                    self.logger.error(
+                        f'{R}Error downloading file {Y}{fpath}{G} to {C}{local_file}{RE}'
+                    )
+                    exit(1)
+                finally:
+                    self.logger.info(
+                        f'{Y}Downloaded file {G}{fpath} {Y}to {G}{local_file}{RE}'
+                    )
+
+    def upload_dataset_directory(self, local_path: str):
+
+        """ Mirror / upload a dataset directory recursively to remote """
+
+        local_path = os.path.realpath(local_path)  # always local, but resolve symlinks
+        local_name = os.path.basename(local_path)
+
+        remote_directory = f"{self.storage_path}/{local_name}"
+
+        if self.remote:
+            self.conn = self._connect()  # use only when remote
+
+            if not self.conn:
+                self.logger.error(
+                    f'{R}Could not upload directory: no connection{RE}'
+                )
+                return
+
+            self.logger.info(f'Create remote storage directory {remote_directory}')
+            try:
+                self.sftp.mkdir(remote_directory)
+            except IOError:
+                self.logger.info(f'{R}Dataset is already stored at: {Y}{remote_directory}{RE}')
+                self.logger.info('Please delete from storage before attempting to store again')
+                exit(1)
+
+            for root, directories, files in os.walk(local_path):
+                # no subdirectories, only files
+                for f in files:
+                    try:
+                        self.sftp.put(os.path.join(root, f), remotepath=f"{remote_directory}/{f}")
+                    except SSHException:  # TODO: is this exception correct for SFTP?
+                        self.logger.error(
+                            f'{R}Error uploading file {Y}{f}{G} to {C}{self.host}{RE}'
+                        )
+                        exit(1)
+                    finally:
+                        self.logger.info(
+                            f'{Y}Uploaded file: {G}{f} {Y}to {C}{self.host}{RE}:{G}{remote_directory}{RE}'
+                        )
+        else:
+            try:
+                copy_tree(local_path, remote_directory)
+            except FileExistsError:
+                raise
+            except IOError:
+                self.logger.error(
+                    f'{R}Error copying directory tree {local_path}{R} to {C}{self.host}{RE}'
+                )
+                exit(1)
+            finally:
+                self.logger.info(
+                    f'{Y}Copied directory tree {G}{local_path}{Y} to {C}{self.host}{RE}'
+                )
+
+        return local_path
+
+
+class PipelineClient(Client):
+    """Client to interact with a local or remote host via SSH & SCP for executing Nextflow pipelines"""
+
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        ssh_key: Path,
+        nexus: Path,
+        name: str,
+        nextflow: PosixPath,  # client node nextflow requirement
+        pipeline: str,
+        profile: str,
+        container: str,
+        workdir: PosixPath,
+        params: dict,
+    ):
+        Client.__init__(self, host, user, ssh_key, name, logger_name='PipelineClient')
+
+        self.nexus = nexus  # Path to hub for this pipeline on head node
+        self.workdir = workdir  # Working directory for pipeline on client
+
+        self.nextflow_version = 20.07
+        self.basedir = "$HOME/.nanopath/pipelines"  # on client
+
+        self.nextflow = nextflow
+        self.container = container
+        self.pipeline = pipeline
+        self.profile = profile
+
+        self.params = params
+
+        self.file_input = self.workdir / 'files'
+        self.file_output = self.workdir / 'results'
+
+        self.nexus_results = self.nexus / 'results'  # mirrored hub results
+
+        # Keep a registry of active screens and commands executed
+        self.active_screens = {}
+
+    def check_nextflow_version(self) -> float:
+
+        out = self.execute_cmd(f"{self.nextflow} -v")
+
+        if not out:
+            self.logger.error(
+                f'{R}Could not detect Nextflow - '
+                f'did you setup the server correctly?{RE}'
+            )
+            exit(1)
+
+        try:
+            response = out[0]
+            version_str = response.split()[2]
+            major_version = ".".join(version_str.split('.')[:2])
+            version = float(major_version)
+        except (KeyError, ValueError):
+            self.logger.error('Could not extract Nextflow version')
+            raise
+
+        if version < self.nextflow_version:
+            raise ClientError(
+                f'Nextflow version must be >= {self.nextflow_version}'
+            )
+        else:
+            self.logger.info(f'Nextflow version is: {G}v{version}{RE}')
+
+        return version
+
+    def check_pipeline_node(self, server: str):
+
+        # Are screens working?
+
+        out = self.execute_cmd(f'screen -v && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'{R}Could not detect screen utility on server{RE} - '
+                f'did you run the server setup on {R}{server}{RE}?'
+            )
+            exit(1)
+        else:
+            self.logger.info('Screens are working on server')
+
+        # Is the pipeline base directory present?
+
+        out = self.execute_cmd(f'[ -d "{self.basedir}" ] && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'{R}Could not detect pipeline directory{RE} - '
+                f'did you run the server setup on {R}{server}{RE}?'
+            )
+            exit(1)
+
+        # Is the selected pipeline present?
+
+        pipeline_file = Path(self.basedir) / self.pipeline
+        out = self.execute_cmd(f'[ -f "{pipeline_file}.nf" ] && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'{R}Could not detect pipeline in directory{RE} - '
+                f'did you run the server setup on {R}{server}{RE}?'
+            )
+            exit(1)
+
+        self.logger.info(
+            f'Pipeline: {G}{self.pipeline}.nf{RE}'
+        )
+        self.logger.info(
+            f'Pipeline profile: {G}{self.profile}{RE}'
+        )
+        self.logger.info(
+            f'Working directory: {G}{self.workdir}{RE}'
+        )
+
+        # Is the working directory present? If not list it
+
+        out = self.execute_cmd(f'[ -d "{self.workdir}" ] && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'Could not detect working directory: {self.workdir}'
+            )
+            self.logger.info(
+                f'Create working directory: {self.workdir}'
+            )
+            out = self.execute_cmd(f'mkdir -p {self.workdir} && echo "1"')
+            if not out:
+                self.logger.info(
+                    f'{R}Could not create working directory: {self.workdir}{RE}'
+                )
+                exit(1)
+
+        # Is the file input directory present? If not list it
+
+        out = self.execute_cmd(f'[ -d "{self.file_input}" ] && echo "1"')
+
+        if not out:
+            self.logger.info(
+                f'Could not detect file input directory: {self.file_input}'
+            )
+            self.logger.info(
+                f'Create file input directory: {self.file_input}'
+            )
+            out = self.execute_cmd(f'mkdir -p {self.file_input} && echo "1"')
+            if not out:
+                self.logger.info(
+                    f'{R}Could not create file input directory: {self.file_input}{RE}'
+                )
+                exit(1)
 
     def run_pipeline(
         self, resume: bool = False, screen: bool = True, keep_open: bool = False
@@ -744,14 +939,6 @@ class PipelineClient(PoreLogger):
 
         return screen_id
 
-    def kill_screen(self, grep: str = "np_"):
-
-        kill_command = f"screen -ls | grep '{grep}' | cut -d. -f1 | xargs kill"
-        self.execute_cmd(cmd=kill_command)
-        self.logger.debug(
-            f"Removed screens with grep: {grep}"
-        )
-
     def nuke(self):
         self.execute_cmd(cmd=f'rm -rf {self.workdir}', confirmation=True)
         self.logger.info(
@@ -762,6 +949,8 @@ class PipelineClient(PoreLogger):
 class PipelinePollster(PoreLogger):
 
     """ Checks on results and status of pipelines, poll with command remote or local """
+
+    # TODO: implement threading
 
     def __init__(self, pipeline_client: PipelineClient):
         PoreLogger.__init__(self, level=logging.INFO, name='PipelinePollster')
@@ -789,7 +978,7 @@ class PipelinePollster(PoreLogger):
         fi
         """
 
-        # Update the result file registry on client
+        # Update the result file registry on netflow
         find_output = self.pipeline_client.execute_cmd(
             cmd=command, screen=False, confirmation=False
         )
@@ -850,7 +1039,7 @@ class PipelinePollster(PoreLogger):
                     f'{Y}Pipeline completed on{RE}: {G}{pipeline_screen}{RE}'
                 )
                 self.last_screen_open = False
-                # Remove active screen from client, so in clean up on False return
+                # Remove active screen from netflow, so in clean up on False return
                 # it isn't attempted to be killed
                 self.pipeline_client.active_screens.pop(pipeline_screen)
                 return False
