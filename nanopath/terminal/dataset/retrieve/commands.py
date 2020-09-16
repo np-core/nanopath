@@ -14,6 +14,27 @@ from nanopath.dataset import DataStorage
     help='Exact name of dataset in storage on node, format: {collection}-{name}-v{version}'
 )
 @click.option(
+    '--name',
+    '-n',
+    type=str,
+    required=True,
+    help='Name of the dataset (short)'
+)
+@click.option(
+    '--collection',
+    '-c',
+    required=True,
+    type=str,
+    help='Dataset collection'
+)
+@click.option(
+    '--version',
+    '-v',
+    required=True,
+    type=int,
+    help='Dataset version'
+)
+@click.option(
     '--outdir',
     '-o',
     type=Path,
@@ -26,7 +47,7 @@ from nanopath.dataset import DataStorage
     type=Path,
     help='Netflow node configuration file with entry: storage'
 )
-def retrieve(dataset, outdir, config):
+def retrieve(dataset, outdir, name, version, collection, config):
 
     """ Retrieve a dataset from storage """
 
@@ -39,6 +60,9 @@ def retrieve(dataset, outdir, config):
 
     if outdir is None:
         outdir = Path(dataset)
+
+    if name and version and collection:
+        dataset = f"{collection}-{name}-v{version}"
 
     ds = DataStorage(data=None, config=config)
 

@@ -1,9 +1,9 @@
 storage:
   nectar:
-    host: server.genomicsresearch.org
-    user: eike
-    ssh_key: ~/.ssh/nectar
-    storage_path: /Backup/Data/Projects/QLD_Genomics/datasets
+    host: server.somewhere.org  # on remote
+    user: someone
+    ssh_key: ~/.ssh/key_to_somewhere
+    storage_path: /data/datasets
     build_container: null  # implement later
     encrypt_container: null  # implement later
 
@@ -12,9 +12,9 @@ nodes: # UNIX
     host: local
     user: null
     ssh_key: null  # on runtime machine
-    workdir: /data/nanopath/local/fastq # on remote
-    nextflow: /home/esteinig/bin/nextflow # on remote
-    container: esteinig/pathogen:latest
+    workdir: /data/someone/local/fastq # on local
+    nextflow: /home/someone/bin/nextflow # on local
+    container: someone/pathogen:latest
     pipeline: pathogen
     profile: local
     params:
@@ -52,8 +52,8 @@ server_templates:
     host: local
     user: null
     ssh_key: null  # on runtime machine
-    workdir: /data/nanopath/local/fast5 # on remote
-    nextflow: /home/esteinig/bin/nextflow # on remote
+    workdir: /data/someone/local/fast5 # on local
+    nextflow: /home/someone/bin/nextflow # on local
     container: esteinig/signal:latest
     pipeline: signal
     profile: gpu
