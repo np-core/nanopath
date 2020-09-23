@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beast beautitemplate='Standard' beautistatus='' namespace="beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood" required="" version="2.6">
+    <data id="snp" spec="Alignment" name="alignment">
+        {{ data_xml }}
+    </data>
+
+    {{ slice_functions }}
+
+    <map name="Uniform" >beast.math.distributions.Uniform</map>
+    <map name="Exponential" >beast.math.distributions.Exponential</map>
+    <map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
+    <map name="Normal" >beast.math.distributions.Normal</map>
+    <map name="Beta" >beast.math.distributions.Beta</map>
+    <map name="Gamma" >beast.math.distributions.Gamma</map>
+    <map name="LaplaceDistribution" >beast.math.distributions.LaplaceDistribution</map>
+    <map name="prior" >beast.math.distributions.Prior</map>
+    <map name="InverseGamma" >beast.math.distributions.InverseGamma</map>
+    <map name="OneOnX" >beast.math.distributions.OneOnX</map>
+
+    {{ mcmc_xml }}
+        <state id="state" spec="State" storeEvery="5000">
+            <tree id="Tree.t:snp" spec="beast.evolution.tree.Tree" name="stateNode">
+                <trait id="dateTrait.t:snp" spec="beast.evolution.tree.TraitSet" traitname="date-forward" value="{{ date_xml }}">
+                    <taxa id="TaxonSet.snp" spec="TaxonSet">
+                        <alignment idref="snp"/>
+                    </taxa>
+                </trait>
+                <taxonset idref="TaxonSet.snp"/>
+            </tree>
+            <parameter id="freqParameter.s:snp" spec="parameter.RealParameter" dimension="4" lower="0.0" name="stateNode" upper="1.0">0.25</parameter>
+            <parameter id="rateAC.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+            <parameter id="rateAG.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+            <parameter id="rateAT.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+            <parameter id="rateCG.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+            <parameter id="rateGT.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+            <parameter id="gammaShape.s:snp" spec="parameter.RealParameter" name="stateNode">10.0</parameter>
+            {{ origin_param }}
+            {{ reproductive_number_param }}
+            {{ sampling_proportion_param }}
+            {{ become_uninfectious_param }}
+            {{ clock_param }}
+            {{ clock_state_node }}
+        </state>
+
+        <init id="RandomTree.t:snp" spec="beast.evolution.tree.RandomTree" estimate="false" initial="@Tree.t:snp" taxa="@snp">
+            <populationModel id="ConstantPopulation0.t:snp" spec="ConstantPopulation">
+                <parameter id="randomPopSize.t:snp" spec="parameter.RealParameter" name="popSize">1.0</parameter>
+            </populationModel>
+        </init>
+
+        <distribution id="posterior" spec="util.CompoundDistribution">
+            <distribution id="prior" spec="util.CompoundDistribution">
+                <distribution id="BDSKY_Serial.t:snp" spec="beast.evolution.speciation.BirthDeathSkylineModel" becomeUninfectiousRate="@becomeUninfectiousRate_BDSKY_Serial.t:snp" origin="@origin_BDSKY_Serial.t:snp" reproductiveNumber="@reproductiveNumber_BDSKY_Serial.t:snp" samplingProportion="@samplingProportion_BDSKY_Serial.t:snp" tree="@Tree.t:snp">
+                {{ slice_rates }}
+                </distribution>
+                <prior id="FrequenciesPrior.s:snp" name="distribution" x="@freqParameter.s:snp">
+                    <Uniform id="Uniform.3" name="distr"/>
+                </prior>
+                <prior id="GammaShapePrior.s:snp" name="distribution" x="@gammaShape.s:snp">
+                    <Exponential id="Exponential.0" name="distr">
+                        <parameter id="RealParameter.0" spec="parameter.RealParameter" estimate="false" name="mean">10.0</parameter>
+                    </Exponential>
+                </prior>
+                <prior id="RateACPrior.s:snp" name="distribution" x="@rateAC.s:snp">
+                    <Gamma id="Gamma.0" name="distr">
+                        <parameter id="RealParameter.1" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                        <parameter id="RealParameter.2" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                    </Gamma>
+                </prior>
+                <prior id="RateAGPrior.s:snp" name="distribution" x="@rateAG.s:snp">
+                    <Gamma id="Gamma.1" name="distr">
+                        <parameter id="RealParameter.3" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                        <parameter id="RealParameter.4" spec="parameter.RealParameter" estimate="false" name="beta">20.0</parameter>
+                    </Gamma>
+                </prior>
+                <prior id="RateATPrior.s:snp" name="distribution" x="@rateAT.s:snp">
+                    <Gamma id="Gamma.2" name="distr">
+                        <parameter id="RealParameter.5" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                        <parameter id="RealParameter.6" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                    </Gamma>
+                </prior>
+                <prior id="RateCGPrior.s:snp" name="distribution" x="@rateCG.s:snp">
+                    <Gamma id="Gamma.3" name="distr">
+                        <parameter id="RealParameter.7" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                        <parameter id="RealParameter.8" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                    </Gamma>
+                </prior>
+                <prior id="RateGTPrior.s:snp" name="distribution" x="@rateGT.s:snp">
+                    <Gamma id="Gamma.5" name="distr">
+                        <parameter id="RealParameter.11" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                        <parameter id="RealParameter.12" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                    </Gamma>
+                </prior>
+                {{ origin_prior }}
+                {{ reproductive_number_prior }}
+                {{ sampling_proportion_prior }}
+                {{ become_uninfectious_prior }}
+                {{ clock_prior }}
+            </distribution>
+            <distribution id="likelihood" spec="util.CompoundDistribution" useThreads="true">
+                <distribution id="treeLikelihood.snp" spec="ThreadedTreeLikelihood" data="@snp" tree="@Tree.t:snp">
+                    <siteModel id="SiteModel.s:snp" spec="SiteModel" gammaCategoryCount="4" shape="@gammaShape.s:snp">
+                        <parameter id="mutationRate.s:snp" spec="parameter.RealParameter" estimate="false" name="mutationRate">1.0</parameter>
+                        <parameter id="proportionInvariant.s:snp" spec="parameter.RealParameter" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                        <substModel id="gtr.s:snp" spec="GTR" rateAC="@rateAC.s:snp" rateAG="@rateAG.s:snp" rateAT="@rateAT.s:snp" rateCG="@rateCG.s:snp" rateGT="@rateGT.s:snp">
+                            <parameter id="rateCT.s:snp" spec="parameter.RealParameter" estimate="false" lower="0.0" name="rateCT">1.0</parameter>
+                            <frequencies id="estimatedFreqs.s:snp" spec="Frequencies" frequencies="@freqParameter.s:snp"/>
+                        </substModel>
+                    </siteModel>
+                    {{ clock_branch_rate }}
+                </distribution>
+            </distribution>
+        </distribution>
+
+        <operator id="FrequenciesExchanger.s:snp" spec="DeltaExchangeOperator" delta="0.01" weight="0.1">
+            <parameter idref="freqParameter.s:snp"/>
+        </operator>
+        <operator id="RateACScaler.s:snp" spec="ScaleOperator" parameter="@rateAC.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="RateAGScaler.s:snp" spec="ScaleOperator" parameter="@rateAG.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="RateATScaler.s:snp" spec="ScaleOperator" parameter="@rateAT.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="RateCGScaler.s:snp" spec="ScaleOperator" parameter="@rateCG.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="RateGTScaler.s:snp" spec="ScaleOperator" parameter="@rateGT.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="gammaShapeScaler.s:snp" spec="ScaleOperator" parameter="@gammaShape.s:snp" scaleFactor="0.5" weight="0.1"/>
+        <operator id="BDSKY_SerialTreeScaler.t:snp" spec="ScaleOperator" scaleFactor="0.5" tree="@Tree.t:snp" weight="3.0"/>
+        <operator id="BDSKY_SerialTreeRootScaler.t:snp" spec="ScaleOperator" rootOnly="true" scaleFactor="0.5" tree="@Tree.t:snp" weight="3.0"/>
+        <operator id="BDSKY_SerialUniformOperator.t:snp" spec="Uniform" tree="@Tree.t:snp" weight="30.0"/>
+        <operator id="BDSKY_SerialSubtreeSlide.t:snp" spec="SubtreeSlide" tree="@Tree.t:snp" weight="15.0"/>
+        <operator id="BDSKY_SerialNarrow.t:snp" spec="Exchange" tree="@Tree.t:snp" weight="15.0"/>
+        <operator id="BDSKY_SerialWide.t:snp" spec="Exchange" isNarrow="false" tree="@Tree.t:snp" weight="3.0"/>
+        <operator id="BDSKY_SerialWilsonBalding.t:snp" spec="WilsonBalding" tree="@Tree.t:snp" weight="3.0"/>
+        <operator id="becomeUninfectiousRateScaler_BDSKY_Serial.t:snp" spec="ScaleOperator" parameter="@becomeUninfectiousRate_BDSKY_Serial.t:snp" scaleFactor="0.75" weight="2.0"/>
+        <operator id="reproductiveNumberScaler_BDSKY_Serial.t:snp" spec="ScaleOperator" parameter="@reproductiveNumber_BDSKY_Serial.t:snp" scaleFactor="0.75" weight="10.0"/>
+        <operator id="samplingProportionScaler_BDSKY_Serial.t:snp" spec="ScaleOperator" parameter="@samplingProportion_BDSKY_Serial.t:snp" scaleFactor="0.75" weight="10.0"/>
+        <operator id="updownBD_BDSKY_Serial.t:snp" spec="UpDownOperator" scaleFactor="0.75" weight="2.0">
+            <up idref="reproductiveNumber_BDSKY_Serial.t:snp"/>
+            <down idref="becomeUninfectiousRate_BDSKY_Serial.t:snp"/>
+        </operator>
+        <operator id="origScaler_BDSKY_Serial.t:snp" spec="ScaleOperator" parameter="@origin_BDSKY_Serial.t:snp" scaleFactor="0.75" weight="1.0"/>
+
+        {{ clock_scale_operator }}
+        {{ clock_updown_operator }}
+
+        <logger id="tracelog" spec="Logger" fileName="{{ posterior_log }}" logEvery="{{ posterior_every }}" model="@posterior" sanitiseHeaders="true" sort="smart">
+            <log idref="posterior"/>
+            <log idref="likelihood"/>
+            <log idref="prior"/>
+            <log idref="treeLikelihood.snp"/>
+            <log id="TreeHeight.t:snp" spec="beast.evolution.tree.TreeHeightLogger" tree="@Tree.t:snp"/>
+            <log idref="freqParameter.s:snp"/>
+            <log idref="rateAC.s:snp"/>
+            <log idref="rateAG.s:snp"/>
+            <log idref="rateAT.s:snp"/>
+            <log idref="rateCG.s:snp"/>
+            <log idref="rateGT.s:snp"/>
+            <log idref="gammaShape.s:snp"/>
+            <log idref="BDSKY_Serial.t:snp"/>
+            <log idref="origin_BDSKY_Serial.t:snp"/>
+            <log idref="becomeUninfectiousRate_BDSKY_Serial.t:snp"/>
+            <log idref="reproductiveNumber_BDSKY_Serial.t:snp"/>
+            <log idref="samplingProportion_BDSKY_Serial.t:snp"/>
+            {{ clock_logger }}
+            {{ slice_loggers }}
+        </logger>
+
+        <logger id="screenlog" spec="Logger" fileName="" logEvery="1000">
+            <log idref="posterior"/>
+            <log idref="likelihood"/>
+            <log idref="prior"/>
+        </logger>
+
+        <logger id="treelog.t:snp" spec="Logger" fileName="{{ tree_log }}" logEvery="{{ tree_every }}" mode="tree">
+            <log id="TreeWithMetaDataLogger.t:snp" spec="beast.evolution.tree.TreeWithMetaDataLogger" tree="@Tree.t:snp"/>
+        </logger>
+
+        <operatorschedule id="OperatorSchedule" spec="OperatorSchedule"/>
+
+    </run>
+
+</beast>

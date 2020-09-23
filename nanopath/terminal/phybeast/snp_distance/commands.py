@@ -86,7 +86,7 @@ def snp_distance(
         snp_dist = pandas.DataFrame(snp_dist, index=samples)
 
         snp_dist.to_csv(
-            f'{prefix}_snp_dist.tsv', sep='\t', index=True, header=None
+            f'{prefix}_snp_dist.tsv', sep='\t', index=True, header=False
         )
 
     snp_dist.columns = samples

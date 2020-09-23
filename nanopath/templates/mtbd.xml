@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><beast beautitemplate='MultiTypeBirthDeath' beautistatus='' namespace="beast.core:beast.evolution.alignment:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood" required="" version="2.6">
+
+
+<data id="snp" spec="Alignment" name="alignment">
+	{{ data_xml }}
+</data>
+
+
+    
+
+
+    
+
+
+    
+<map name="Uniform" >beast.math.distributions.Uniform</map>
+<map name="Exponential" >beast.math.distributions.Exponential</map>
+<map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
+<map name="Normal" >beast.math.distributions.Normal</map>
+<map name="Beta" >beast.math.distributions.Beta</map>
+<map name="Gamma" >beast.math.distributions.Gamma</map>
+<map name="LaplaceDistribution" >beast.math.distributions.LaplaceDistribution</map>
+<map name="prior" >beast.math.distributions.Prior</map>
+<map name="InverseGamma" >beast.math.distributions.InverseGamma</map>
+<map name="OneOnX" >beast.math.distributions.OneOnX</map>
+
+
+{{ mcmc_xml }}
+    <state id="state" spec="State" storeEvery="5000">
+        <stateNode id="Tree.t:snp" spec="beast.evolution.tree.StructuredCoalescentMultiTypeTree">
+            <migrationModel id="migModel.t:snp" spec="beast.evolution.tree.SCMigrationModel">
+                <parameter id="RealParameter.0" spec="parameter.RealParameter" dimension="2" estimate="false" name="rateMatrix">1.0 1.0</parameter>
+                <parameter id="RealParameter.1" spec="parameter.RealParameter" estimate="false" name="rateMatrixScaleFactor">1.0</parameter>
+                <parameter id="RealParameter.2" spec="parameter.RealParameter" dimension="2" estimate="false" name="popSizes">1.0 1.0</parameter>
+                <parameter id="RealParameter.3" spec="parameter.RealParameter" estimate="false" name="popSizesScaleFactor">1.0</parameter>
+                <typeSet id="typeSet.t:snp" spec="beast.evolution.tree.TypeSet">
+                    <typeTraitSet id="typeTraitSetInput.t:snp" spec="beast.evolution.tree.TraitSet" traitname="type" value="{{ type_xml }}">
+                        <taxa id="TaxonSet.0" spec="TaxonSet">
+                            <alignment idref="snp"/>
+                        </taxa>
+                    </typeTraitSet>
+                </typeSet>
+            </migrationModel>
+            <typeTrait idref="typeTraitSetInput.t:snp"/>
+            <typeSet idref="typeSet.t:snp"/>
+            <trait id="dateTrait.t:snp" spec="beast.evolution.tree.TraitSet" taxa="@TaxonSet.0" traitname="date-forward" value="{{ date_xml }}"/>
+            <taxonset idref="TaxonSet.0"/>
+        </stateNode>
+        {{ rate_matrix_param}}
+		{{ reproductive_number_param }}
+		{{ sampling_proportion_param }}
+		{{ become_uninfectious_param }}
+        {{ geo_frequency_param }}
+        {{ clock_param }}
+        {{ clock_state_node }}
+        <parameter id="gammaShape.s:snp" spec="parameter.RealParameter" name="stateNode">1.0</parameter>
+        <parameter id="freqParameter.s:snp" spec="parameter.RealParameter" dimension="4" lower="0.0" name="stateNode" upper="1.0">0.25</parameter>
+        <parameter id="rateAC.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+        <parameter id="rateAG.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+        <parameter id="rateAT.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+        <parameter id="rateCG.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+        <parameter id="rateGT.s:snp" spec="parameter.RealParameter" lower="0.0" name="stateNode">1.0</parameter>
+    </state>
+
+    <distribution id="posterior" spec="util.CompoundDistribution">
+        <distribution id="prior" spec="util.CompoundDistribution">
+            <distribution id="birthDeathMigration.t:snp" spec="beast.evolution.speciation.BirthDeathMigrationModel" R0="@R0.t:snp" becomeUninfectiousRate="@becomeUninfectiousRate.t:snp" checkRho="false" frequencies="@geo-frequencies.t:snp" migrationMatrix="@rateMatrix.t:snp" samplingProportion="@samplingProportion.t:snp" stateNumber="2" tree="@Tree.t:snp">
+                {{ sampling_rate_slice }}
+            </distribution>
+			{{ reproductive_number_prior }}
+            {{ become_uninfectious_prior }}
+			{{ clock_prior }}
+			
+            <prior id="FrequenciesPrior.s:snp" name="distribution" x="@freqParameter.s:snp">
+                <Uniform id="Uniform.2" name="distr"/>
+            </prior>
+            <prior id="GammaShapePrior.s:snp" name="distribution" x="@gammaShape.s:snp">
+                <Exponential id="Exponential.0" name="distr">
+                    <parameter id="RealParameter.4" spec="parameter.RealParameter" name="mean">10.0</parameter>
+                </Exponential>
+            </prior>
+            <prior id="RateACPrior.s:snp" name="distribution" x="@rateAC.s:snp">
+                <Gamma id="Gamma.0" name="distr">
+                    <parameter id="RealParameter.12" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                    <parameter id="RealParameter.13" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                </Gamma>
+            </prior>
+            <prior id="RateAGPrior.s:snp" name="distribution" x="@rateAG.s:snp">
+                <Gamma id="Gamma.1" name="distr">
+                    <parameter id="RealParameter.14" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                    <parameter id="RealParameter.15" spec="parameter.RealParameter" estimate="false" name="beta">20.0</parameter>
+                </Gamma>
+            </prior>
+            <prior id="RateATPrior.s:snp" name="distribution" x="@rateAT.s:snp">
+                <Gamma id="Gamma.2" name="distr">
+                    <parameter id="RealParameter.16" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                    <parameter id="RealParameter.17" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                </Gamma>
+            </prior>
+            <prior id="RateCGPrior.s:snp" name="distribution" x="@rateCG.s:snp">
+                <Gamma id="Gamma.3" name="distr">
+                    <parameter id="RealParameter.18" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                    <parameter id="RealParameter.19" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                </Gamma>
+            </prior>
+            <prior id="RateGTPrior.s:snp" name="distribution" x="@rateGT.s:snp">
+                <Gamma id="Gamma.5" name="distr">
+                    <parameter id="RealParameter.22" spec="parameter.RealParameter" estimate="false" name="alpha">0.05</parameter>
+                    <parameter id="RealParameter.23" spec="parameter.RealParameter" estimate="false" name="beta">10.0</parameter>
+                </Gamma>
+            </prior>
+            {{ rate_matrix_prior }}
+            {{ sampling_proportion_prior }}
+        </distribution>
+        <distribution id="likelihood" spec="util.CompoundDistribution">
+            <distribution id="treeLikelihood.snp" spec="TreeLikelihood" data="@snp" tree="@Tree.t:snp">
+                <siteModel id="SiteModel.s:snp" spec="SiteModel" gammaCategoryCount="4" shape="@gammaShape.s:snp">
+                    <parameter id="mutationRate.s:snp" spec="parameter.RealParameter" estimate="false" name="mutationRate">1.0</parameter>
+                    <parameter id="proportionInvariant.s:snp" spec="parameter.RealParameter" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                    <substModel id="gtr.s:snp" spec="GTR" rateAC="@rateAC.s:snp" rateAG="@rateAG.s:snp" rateAT="@rateAT.s:snp" rateCG="@rateCG.s:snp" rateGT="@rateGT.s:snp">
+                        <parameter id="rateCT.s:snp" spec="parameter.RealParameter" estimate="false" lower="0.0" name="rateCT">1.0</parameter>
+                        <frequencies id="estimatedFreqs.s:snp" spec="Frequencies" frequencies="@freqParameter.s:snp"/>
+                    </substModel>
+                </siteModel>
+                {{ clock_branch_rate }}
+            </distribution>
+        </distribution>
+    </distribution>
+
+    <operator id="STX.t:snp" spec="multitypetree.operators.TypedSubtreeExchange" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" weight="10.0"/>
+
+    <operator id="TWB.t:snp" spec="multitypetree.operators.TypedWilsonBalding" alpha="0.2" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" weight="10.0"/>
+
+    <operator id="NR.t:snp" spec="multitypetree.operators.NodeRetype" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" weight="10.0"/>
+
+    <operator id="NSR1.t:snp" spec="multitypetree.operators.NodeShiftRetype" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" rootOnly="true" weight="10.0"/>
+
+    <operator id="NSR2.t:snp" spec="multitypetree.operators.NodeShiftRetype" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" noRoot="true" weight="10.0"/>
+
+    <operator id="MTU.t:snp" spec="multitypetree.operators.MultiTypeUniform" includeRoot="true" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" weight="10.0"/>
+
+    <operator id="MTTS.t:snp" spec="multitypetree.operators.MultiTypeTreeScale" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" scaleFactor="0.98" useOldTreeScaler="true" weight="10.0"/>
+
+    <operator id="MTTUpDown.t:snp" spec="multitypetree.operators.MultiTypeTreeScale" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp" scaleFactor="0.98" useOldTreeScaler="true" weight="10.0">
+        <parameterInverse idref="rateMatrix.t:snp"/>
+        <parameterInverse idref="clockRate.c:snp"/>
+    </operator>
+
+    <operator id="R0Scaler.t:snp" spec="ScaleOperator" parameter="@R0.t:snp" scaleFactor="0.8" weight="3.0"/>
+
+    <operator id="becomeUninfectiousRateScaler.t:snp" spec="ScaleOperator" optimise="false" parameter="@becomeUninfectiousRate.t:snp" scaleAll="false" scaleFactor="0.9" weight="1.0"/>
+
+    <operator id="samplingScaler.t:snp" spec="ScaleOperator" parameter="@samplingProportion.t:snp" scaleFactor="0.9" weight="3.0"/>
+
+    <operator id="rateMatrixScaler.t:snp" spec="ScaleOperator" parameter="@rateMatrix.t:snp" scaleFactor="0.8" weight="1.0"/>
+
+    <operator id="geo-frequenciesExchange.t:snp" spec="DeltaExchangeOperator" delta="0.1" weight="0.1">
+        <parameter idref="geo-frequencies.t:snp"/>
+    </operator>
+
+    <operator id="updownBD.t:snp" spec="UpDownOperator" scaleFactor="0.9" weight="3.0">
+        <up idref="R0.t:snp"/>
+        <down idref="becomeUninfectiousRate.t:snp"/>
+    </operator>
+
+    <operator id="updownBM.t:snp" spec="UpDownOperator" scaleFactor="0.9" weight="3.0">
+        <up idref="R0.t:snp"/>
+        <down idref="rateMatrix.t:snp"/>
+    </operator>
+
+    <operator id="updownDS.t:snp" spec="UpDownOperator" scaleFactor="0.9" weight="3.0">
+        <up idref="samplingProportion.t:snp"/>
+        <down idref="becomeUninfectiousRate.t:snp"/>
+    </operator>
+
+    
+	{{ clock_scale_operator }}
+	{{ clock_updown_operator }}
+
+    <operator id="gammaShapeScaler.s:snp" spec="ScaleOperator" parameter="@gammaShape.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <operator id="FrequenciesExchanger.s:snp" spec="DeltaExchangeOperator" delta="0.01" weight="0.1">
+        <parameter idref="freqParameter.s:snp"/>
+    </operator>
+
+    <operator id="RateACScaler.s:snp" spec="ScaleOperator" parameter="@rateAC.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <operator id="RateAGScaler.s:snp" spec="ScaleOperator" parameter="@rateAG.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <operator id="RateATScaler.s:snp" spec="ScaleOperator" parameter="@rateAT.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <operator id="RateCGScaler.s:snp" spec="ScaleOperator" parameter="@rateCG.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <operator id="RateGTScaler.s:snp" spec="ScaleOperator" parameter="@rateGT.s:snp" scaleFactor="0.5" weight="0.1"/>
+
+    <logger id="tracelog" spec="Logger" fileName="{{ posterior_log }}" logEvery="{{ posterior_every }}">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+        <log idref="treeLikelihood.snp"/>
+        <log id="treeHeight.t:snp" spec="beast.evolution.tree.TreeHeightLogger" tree="@Tree.t:snp"/>
+        <log id="treeLength.t:snp" spec="multitypetree.util.TreeLengthLogger" tree="@Tree.t:snp"/>
+        <log id="changeCounts.t:snp" spec="multitypetree.util.TypeChangeCounts" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp"/>
+        <log id="nodeTypeCounts.t:snp" spec="multitypetree.util.NodeTypeCounts" migrationModel="@migModel.t:snp" multiTypeTree="@Tree.t:snp"/>
+        <log id="rootTypeLogger.t:snp" spec="multitypetree.util.TreeRootTypeLogger" multiTypeTree="@Tree.t:snp"/>
+        <log idref="R0.t:snp"/>
+        <log idref="samplingProportion.t:snp"/>
+        <log idref="becomeUninfectiousRate.t:snp"/>
+        <log idref="rateMatrix.t:snp"/>
+        <log idref="geo-frequencies.t:snp"/>
+        {{ clock_logger }}
+        <log idref="gammaShape.s:snp"/>
+        <log idref="freqParameter.s:snp"/>
+        <log idref="rateAC.s:snp"/>
+        <log idref="rateAG.s:snp"/>
+        <log idref="rateAT.s:snp"/>
+        <log idref="rateCG.s:snp"/>
+        <log idref="rateGT.s:snp"/>
+    </logger>
+
+    <logger id="screenlog" spec="Logger" logEvery="1000">
+        <log idref="posterior"/>
+        <log id="ESS.0" spec="util.ESS" arg="@posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+    </logger>
+
+    <logger id="treelog.t:snp" spec="Logger" fileName="{{ tree_log }}" logEvery="{{ tree_every }}" mode="tree">
+        <log idref="Tree.t:snp"/>
+    </logger>
+
+    <logger id="maptreelog.t:snp" spec="Logger" fileName="{{ map_tree_log }}" logEvery="{{ tree_every }}" mode="tree">
+        <log id="MAPTreeLogger.0" spec="multitypetree.util.MAPTreeLogger" multiTypeTree="@Tree.t:snp" posterior="@posterior"/>
+    </logger>
+
+    <logger id="typednodetreelog.t:snp" spec="Logger" fileName="{{ typed_node_tree_log }}" logEvery="{{ tree_every }}" mode="tree">
+        <log id="TypedNodeTreeLogger.0" spec="multitypetree.util.TypedNodeTreeLogger" multiTypeTree="@Tree.t:snp"/>
+    </logger>
+
+</run>
+
+</beast>
