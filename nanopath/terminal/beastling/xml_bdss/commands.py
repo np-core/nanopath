@@ -3,7 +3,6 @@ import click
 from pathlib import Path
 from nanopath.beastling import BirthDeathSkylineSerial
 
-
 @click.command()
 @click.option(
     "--alignment", "-a", required=True, type=Path,

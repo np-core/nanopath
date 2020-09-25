@@ -11,8 +11,7 @@ from matplotlib import pyplot as plt
 @click.command()
 @click.option(
     "--dates", "-d", default="dates.tsv",
-    help="Input tab-delineated table with "
-         "columns: name, date", type=Path,
+    help="Input tab-delineated table with columns: name, date", type=Path,
 )
 @click.option(
     "--alignment", "-a", default="dates.core.tsv",
