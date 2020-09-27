@@ -17,6 +17,14 @@ from nanopath.beastling import BirthDeathSkylineSerial
     help="YAML configuration file including prior settings [None]"
 )
 @click.option(
+    "--yaml_dir", "-yd", required=False, type=Path, default=None,
+    help="YAML configuration file directory to process all YAML files from [None]"
+)
+@click.option(
+    "--yaml_glob", "-yg", required=False, type=str, default="*.yaml",
+    help="Glob on the directory to subset config files matching alignment and data input ['*.yaml']"
+)
+@click.option(
     "--clock", "-c", required=False, type=str, default='strict',
     help="Molecular clock model: strict, relaxed_exponential, relaxed_lognormal [strict]"
 )
@@ -40,38 +48,51 @@ from nanopath.beastling import BirthDeathSkylineSerial
     "--prefix", "-p", required=False, type=str, default='bdss',
     help="Prefix for sample logs from BEAST [bdss]"
 )
-def xml_bdss(alignment, data, yaml, clock, mcmc, length, hot, intervals, prefix):
+@click.option(
+    "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
+    help="Outdir for XML files [$PWD/bdss]"
+)
+def xml_bdss(alignment, data, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, outdir, intervals, prefix):
 
     """ Pre-configured Birth-Death Skyline Serial XML """
 
-    bdss = BirthDeathSkylineSerial(
-        alignment=alignment,
-        data=data,
-        clock_model=clock,
-        chain_type=mcmc,
-        chain_length=length,
-        chain_number=hot+1,
-        prefix=prefix
-    )
+    if yaml_dir is not None:
+        yaml_files = {f.stem: f for f in yaml_dir.glob(f"{yaml_glob}")}
+    else:
+        yaml_files = {prefix: yaml}
 
-    bdss.print_configuration()
-    bdss.check_configuration()
+    outdir.mkdir(parents=True, exist_ok=True)
 
-    config = bdss.read_config(file=yaml)
+    for prefix, y in yaml_files.items():
 
-    # Set model prior configuration
-    model_priors = config.get('priors').get('model')
-    bdss.set_model_priors(prior_config=model_priors, distribution=True)
+        bdss = BirthDeathSkylineSerial(
+            alignment=alignment,
+            data=data,
+            clock_model=clock,
+            chain_type=mcmc,
+            chain_length=length,
+            chain_number=hot+1,
+            prefix=prefix
+        )
 
-    # Set clock prior configuration
-    clock_priors = config.get('priors').get('clock')
-    bdss.set_clock(prior_config=clock_priors)
+        bdss.print_configuration()
+        bdss.check_configuration()
 
-    if intervals:
-        # Set slice configurations and overwrite associated priors
-        slice_config = config.get('priors').get('intervals')
-        bdss.set_slices(slice_config=slice_config)
+        config = bdss.read_config(file=y)
 
-    bdss.construct_template(
-        xml=Path(f'{prefix}.xml')
-    )
+        # Set model prior configuration
+        model_priors = config.get('priors').get('model')
+        bdss.set_model_priors(prior_config=model_priors, distribution=True)
+
+        # Set clock prior configuration
+        clock_priors = config.get('priors').get('clock')
+        bdss.set_clock(prior_config=clock_priors)
+
+        if intervals:
+            # Set slice configurations and overwrite associated priors
+            slice_config = config.get('priors').get('intervals')
+            bdss.set_slices(slice_config=slice_config)
+
+        bdss.construct_template(
+            xml=outdir / f'{prefix}.xml'
+        )

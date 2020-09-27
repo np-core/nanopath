@@ -18,6 +18,14 @@ from nanopath.beastling import MultiTypeBirthDeath
     help="YAML configuration file including prior settings [None]"
 )
 @click.option(
+    "--yaml_dir", "-yd", required=False, type=Path, default=None,
+    help="YAML configuration file directory to process all YAML files from [None]"
+)
+@click.option(
+    "--yaml_glob", "-yg", required=False, type=str, default="*.yaml",
+    help="Glob on the directory to subset config files matching alignment and data input ['*.yaml']"
+)
+@click.option(
     "--clock", "-c", required=False, type=str, default='strict',
     help="Molecular clock model: strict, relaxed_exponential, relaxed_lognormal [strict]"
 )
@@ -41,41 +49,54 @@ from nanopath.beastling import MultiTypeBirthDeath
     "--trait", "-t", required=False, type=str, default='trait',
     help="Trait column name to use for demes in model [trait]"
 )
-def xml_mtbd(alignment, data, yaml, clock, mcmc, length, hot, prefix, trait):
+@click.option(
+    "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
+    help="Outdir for XML files [$PWD/bdss]"
+)
+def xml_mtbd(alignment, data, yaml, yaml_dir, yaml_glob, outdir, clock, mcmc, length, hot, prefix, trait):
 
     """ Pre-configured Multi-Type Birth-Death XML """
 
-    mtbd = MultiTypeBirthDeath(
-        alignment=alignment,
-        data=data,
-        clock_model=clock,
-        chain_type=mcmc,
-        chain_length=length,
-        chain_number=hot+1,
-        prefix=prefix,
-        trait=trait
-    )
+    if yaml_dir is not None:
+        yaml_files = {f.stem: f for f in yaml_dir.glob(f"{yaml_glob}")}
+    else:
+        yaml_files = {prefix: yaml}
 
-    mtbd.print_configuration()
-    mtbd.check_configuration()
+    outdir.mkdir(parents=True, exist_ok=True)
 
-    config = mtbd.read_config(file=yaml)
+    for prefix, y in yaml_files.items():
 
-    # Set model configuration
-    model_config = config.get('model')
-    mtbd.set_model_config(model_config=model_config)
+        mtbd = MultiTypeBirthDeath(
+            alignment=alignment,
+            data=data,
+            clock_model=clock,
+            chain_type=mcmc,
+            chain_length=length,
+            chain_number=hot+1,
+            prefix=prefix,
+            trait=trait
+        )
 
-    # Set model prior configuration
-    model_priors = config.get('priors').get('model')
-    mtbd.set_model_priors(prior_config=model_priors, distribution=True)
+        mtbd.print_configuration()
+        mtbd.check_configuration()
 
-    # Set clock prior configuration
-    clock_priors = config.get('priors').get('clock')
-    mtbd.set_clock(prior_config=clock_priors)
+        config = mtbd.read_config(file=yaml)
 
-    # Check deme settings
-    mtbd.check_deme_config()
+        # Set model configuration
+        model_config = config.get('model')
+        mtbd.set_model_config(model_config=model_config)
 
-    mtbd.construct_template(
-        xml=Path(f'{prefix}.xml')
-    )
+        # Set model prior configuration
+        model_priors = config.get('priors').get('model')
+        mtbd.set_model_priors(prior_config=model_priors, distribution=True)
+
+        # Set clock prior configuration
+        clock_priors = config.get('priors').get('clock')
+        mtbd.set_clock(prior_config=clock_priors)
+
+        # Check deme settings
+        mtbd.check_deme_config()
+
+        mtbd.construct_template(
+            xml=outdir / f'{prefix}.xml'
+        )
