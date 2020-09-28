@@ -124,6 +124,27 @@ def remove_sample(alignment: Path, outfile: Path, remove: str or list) -> None:
                 fout.write(str(entry) + '\n')
 
 
+def rename_fasta_header(fasta: Path, outfile: Path, prefix: str = 'contig'):
+
+    """ Rename Fasta headers sequentially """
+
+    i = 0
+    with pysam.FastxFile(fasta) as fin, outfile.open('w') as fout:
+        for entry in fin:
+            entry.name = f"{prefix}{i}"
+            fout.write(str(entry) + '\n')
+            i += 1
+
+
+def print_fastx_header(fastx: Path):
+
+    """ Convenience function for iterating over Clair reference headers """
+
+    with pysam.FastxFile(fastx) as fin:
+        for entry in fin:
+            print(entry.name)
+
+
 def subset_alignment(alignment: Path, data: Path, outdir: Path, column: str, meta: Path = None) -> None:
 
     """
