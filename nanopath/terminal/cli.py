@@ -9,7 +9,7 @@ from .utils import utils
 from .phybeast import phybeast
 from .assembly import assembly
 from .survey import survey
-
+from .variants import variants
 
 VERSION = '1'
 
@@ -30,3 +30,4 @@ terminal_client.add_command(survey)
 terminal_client.add_command(netflow)
 terminal_client.add_command(phybeast)
 terminal_client.add_command(assembly)
+terminal_client.add_command(variants)

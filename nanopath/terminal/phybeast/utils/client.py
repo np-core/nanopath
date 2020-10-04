@@ -2,8 +2,6 @@ import click
 
 from .show_dates import show_dates
 from .subset_aln import subset_aln
-from .sort_traits import sort_traits
-from .join_traits import join_traits
 from .extract_rate import extract_rate
 from .remove_reference import remove_reference
 from .date_random_test import date_random_test
@@ -26,8 +24,6 @@ def utils():
 
 utils.add_command(show_dates)
 utils.add_command(subset_aln)
-utils.add_command(sort_traits)
-utils.add_command(join_traits)
 utils.add_command(extract_rate)
 utils.add_command(remove_reference)
 utils.add_command(date_random_test)

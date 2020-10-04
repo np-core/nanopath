@@ -17,7 +17,7 @@ import dendropy
 import pyfastx
 
 try:
-    from pysam import VariantFile
+    from pysam import VariantFile, VariantRecord
 except ModuleNotFoundError:
     pass # windows
 
@@ -523,9 +523,18 @@ class Sample(PoreLogger):
 
     """ Base class for Snippy, Medaka and Megalodon per sample variant calls """
 
-    def __init__(self, vcf: Path):
+    def __init__(self, vcf: Path, stats: Path = None):
 
         self.vcf = vcf
+
+        if stats:
+            self.stats = self.read_pysamstats(file=stats)
+        else:
+            self.stats = stats
+
+        self.features = pandas.DataFrame()  # snp random forest classifier feature storage [train, eval]
+        self.filtered = pandas.DataFrame()  # filtered features where prediction SNP == True [eval]
+
         self.missing = 'N'
 
         self.data = pandas.DataFrame()  # all sites
@@ -536,8 +545,7 @@ class Sample(PoreLogger):
         self.filtered = 0
         self.missingness = 0.
 
-        #  TODO: Use directory name of sample for now
-        self.name = vcf.parent.name
+        self.name = vcf.stem
 
         logging.basicConfig(
             level=logging.INFO,
@@ -546,6 +554,11 @@ class Sample(PoreLogger):
         )
 
         PoreLogger.__init__(self)
+
+    @staticmethod
+    def read_pysamstats(file):
+
+        return pandas.read_csv(file, sep="\t")
 
     def get_snp_positions(self) -> dict:
 
@@ -612,6 +625,53 @@ class Sample(PoreLogger):
             for key in sorted(variant_reference_sequences.keys())
         )
 
+    def filter(self, min_quality: int = 30):
+
+        # For Illumina, not ONT, I think
+
+        self.data.loc[
+            (self.data['quality'] < min_quality), 'call'
+        ] = self.missing
+
+        filtered = self.data.loc[
+            self.data['call'] == self.missing
+        ]
+
+        self.filtered = len(filtered)
+        self.total = len(self.data)
+        self.missingness = self.filtered / self.total
+
+        self.logger.info(
+            f'Filtered {len(filtered)}/{len(self.data)} < Q{min_quality} '
+            f'({round(self.missingness*100, 4)}%) - '
+            f'keeping: {len(self.data) - len(filtered)}'
+        )
+
+        self.data = self.data[
+            self.data['call'] != self.missing
+        ]
+
+        self.data = self.data.sort_values(
+            ['chromosome', 'position']
+        )  # make sure it's sorted
+
+    def write_vcf(self, out: Path):
+
+        vi = VariantFile(self.vcf)
+        vo = VariantFile(str(out), 'w', header=vi.header)
+
+        records_out = [
+            (row['chromosome'], row['position']) for i, row in self.data.iterrows()
+        ]
+
+        written = 0
+        for rec in vi.fetch():
+            if (rec.chrom, int(rec.pos)) in records_out:  # TODO: does not consider Snippy broken COMPLEX
+                written += 1
+                vo.write(rec)
+
+        self.logger.info(f'Wrote {written}/{len(records_out)} filtered records to file: {out}')
+
 
 class SnippySample(Sample):
 
@@ -621,6 +681,7 @@ class SnippySample(Sample):
         self,
         vcf: Path,
         aligned: Path = None,
+        break_complex: bool = True
     ):
 
         Sample.__init__(self, vcf=vcf)
@@ -631,6 +692,58 @@ class SnippySample(Sample):
 
         self.logger.debug(f'Processing Snippy variant calls: {self.vcf}')
         self.parse()
+
+        self.logger.debug(f'Breaking COMPLEX variants (except INDEL): {self.vcf}')
+        if break_complex:
+            self.data = self.break_complex()
+
+    def break_complex(self):
+
+        """ Break complex variants called with Snippy
+
+        Break complex variants (MNP, COMPLEX) called with Snippy
+        into single nucleotide polymorphisms. Medaka does not have
+        the capacity to call these types, but may call some SNPs that
+        are hidden in them. In the core genome computations, these
+        variants from Snippy are eventually extracted as SNPs into
+        the final alignment, so it would be prudent to include them
+        for comparison, otherwise false positives will be
+        slightly overestimated.
+
+        """
+
+        # Consider only SNPs not COMPLEX or MNP
+
+        # Might result in slightly overestimating false positives as SNPs may
+        # be hidden in the complex variant types from Snippy - these are
+        # actually broken in the core genome computation (snp-sites) and
+        # should therefore be included
+
+        complex_variants = self.data[self.data.snp == False]
+
+        broken_rows = []
+        for _, row in complex_variants.iterrows():
+            ref = list(row['ref'])
+            call = list(row['call'])
+
+            # Reference and called allele are
+            # always the same length from parsing
+            for i, base in enumerate(ref):
+                if base != call[i]:
+                    # SNP detected
+                    new_row = row.copy()
+                    new_row['position'] = new_row['position']+i
+                    new_row['ref'] = base
+                    new_row['call'] = call[i]
+                    new_row['alt'] = call[i]
+                    new_row['snp'] = True
+                    broken_rows.append(new_row)
+
+        complex_broken = pandas.DataFrame(broken_rows)
+        noncomplex_variants = self.data[self.data.snp == True]
+
+        return pandas.concat([noncomplex_variants, complex_broken])\
+            .sort_values(['chromosome', 'position'])
 
     def parse(self):
 
@@ -703,6 +816,63 @@ class SnippySample(Sample):
         return excluded
 
 
+class ClairSample(Sample):
+
+    """ Clair samples are called de novo from ONT"""
+
+    def __init__(
+        self, vcf: Path, stats: Path = None
+    ):
+        Sample.__init__(self, vcf=vcf, stats=stats)
+
+        self.parse()
+
+    def parse(self):
+
+        var = 0
+        total = 0
+        calls = []
+        for rec in VariantFile(self.vcf).fetch():
+
+            total += 1
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts  # tuple
+            qual = float(rec.qual)
+
+            # Clair haploid mode variants
+            try:
+                call = variants[0]
+            except IndexError:
+                self.logger.debug(
+                    f'Could not detect alts for variant in '
+                    f'file {self.vcf} - position {position}'
+                )
+                raise
+
+            if len(reference) == 1 and len(call) == 1:
+                # SNPs only
+                calls.append(dict(
+                    position=position,
+                    call=call,
+                    ref=reference,
+                    alt=call,
+                    chromosome=chromosome,
+                    quality=qual,
+                    snp=True
+                ))
+
+                var += 1
+            else:
+                # NO INDELS
+                continue
+
+        self.data = pandas.DataFrame(calls).sort_values(
+            ['chromosome', 'position']
+        )
+
+
 class MedakaSample(Sample):
 
     """ Medaka samples are called de novo from ONT """
@@ -710,11 +880,12 @@ class MedakaSample(Sample):
     def __init__(
         self,
         vcf: Path,
+        stats: Path = None,
         bam: Path = None,
         min_depth: int = 10,
     ):
 
-        Sample.__init__(self, vcf=vcf)
+        Sample.__init__(self, vcf=vcf, stats=stats)
 
         self.bam = bam
         self.min_depth = min_depth
@@ -734,7 +905,6 @@ class MedakaSample(Sample):
         for rec in VariantFile(self.vcf).fetch():
 
             total += 1
-
             chromosome = rec.chrom
             position = int(rec.pos)
             reference = rec.ref
@@ -765,34 +935,6 @@ class MedakaSample(Sample):
         self.data = pandas.DataFrame(calls).sort_values(
             ['chromosome', 'position']
         )
-
-    def filter(self, min_quality: int = 30):
-
-        self.data.loc[
-            (self.data['quality'] < min_quality), 'call'
-        ] = self.missing
-
-        filtered = self.data.loc[
-            self.data['call'] == self.missing
-        ]
-
-        self.filtered = len(filtered)
-        self.total = len(self.data)
-        self.missingness = self.filtered / self.total
-
-        self.logger.debug(
-            f'Filtered {len(filtered)}/{len(self.data)} < Q{min_quality} '
-            f'({round(self.missingness*100, 4)}%) - '
-            f'keeping: {len(self.data) - len(filtered)}'
-        )
-
-        self.data = self.data[
-            self.data['call'] != self.missing
-        ]
-
-        self.data = self.data.sort_values(
-            ['chromosome', 'position']
-        )  # make sure it's sorted
 
     def get_excluded_positions(self) -> dict:
 

@@ -33,13 +33,20 @@ from nanopath.utils import PoreLogger
     type=Path,
     help='Path to output directory for renamed barcode read files'
 )
-def rename_barcodes(directory, file, panel, outdir):
+@click.option(
+    '--extension',
+    '-e',
+    default='.fastq',
+    type=str,
+    help='Fastq barcode file extension [.fastq]'
+)
+def rename_barcodes(directory, file, panel, outdir, extension):
 
     """ Rename barcode read files after basecalling"""
 
     pl = PoreLogger(level=logging.INFO, name="Utils").logger
 
-    pl.info(f'Creating oputput directory: {outdir}')
+    pl.info(f'Creating output directory: {outdir}')
     outdir.mkdir(parents=True, exist_ok=True)
 
     pl.info(f'Reading panel data from file: {file}')
@@ -52,7 +59,7 @@ def rename_barcodes(directory, file, panel, outdir):
     for p in directory.rglob("*"):
         if p.stem in df.barcode.tolist():
             row = df.loc[df.barcode == p.stem, :]
-            name = row.name.values[0] + ".fq"
+            name = row.name.values[0] + f"{extension}"
             pl.info(f'Rename and copy {p.name} to:  {outdir / name}')
             shutil.copy(
                 str(p), str(outdir / name)
