@@ -44,7 +44,7 @@ def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split,
         # Extract for Nextflow
         if extract:
             header = extract_head.split(",")
-            cats = f.stem.replace(extract, "").strip().split(extract_split)
+            cats = f.name.replace(extract, "").strip().split(extract_split)
             for i, cat in enumerate(cats):
                 cat_name = header[i]  # must be same length as cats
                 df[cat_name] = [cat for _ in range(len(df))]
