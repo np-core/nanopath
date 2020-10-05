@@ -36,7 +36,8 @@ setup(
         "phylo-treetime",
         "ont_fast5_api",
         "weasyprint",
-        "requests"
+        "requests",
+        "pyvcf"
     ],
     entry_points="""
         [console_scripts]
