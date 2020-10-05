@@ -70,6 +70,9 @@ def forest_evaluate(dir_snippy, dir_ont, outdir, caller, model, prefix, mask_wea
     ft.evaluate_model(
         dir_snippy=dir_snippy,
         dir_ont=dir_ont,
+        vcf_snippy=vcf_snippy,
+        vcf_ont=vcf_ont,
+        stats_ont=stats_ont,
         model_file=model,
         caller=caller,
         break_complex=break_complex,
