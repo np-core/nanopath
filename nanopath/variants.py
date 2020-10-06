@@ -479,7 +479,9 @@ class RandomForestFilter(PoreLogger):
                 f'Could not detect matching coverage for each file: {coverage_lengths}'
             )
 
-        snippy_ref_names = [f.stem.replace(".ref", "").split("_")[0] for f in snippy_files]
+        snippy_ref_names = set(
+            [f.stem.replace(".ref", "").split("_")[0] for f in snippy_files]
+        )
 
         for name in snippy_ref_names:
             if name not in ont_coverage.keys():
