@@ -419,15 +419,15 @@ class RandomForestFilter(PoreLogger):
         plt.clf()
 
     @staticmethod
-    def get_vcf_files(dir_snippy, dir_ont):
+    def get_vcf_files(dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf", ont_ext: str = ".vcf"):
 
         if not dir_snippy.exists():
             raise ValueError('Could not find Snippy VCF directory')
         if not dir_ont.exists():
             raise ValueError('Could not find ONT VCF directory')
 
-        snippy_files = list(dir_snippy.glob('*.vcf'))
-        ont_files = list(dir_ont.glob('*.vcf'))  # output from subsampled in format {name}_{coverage}.vcf
+        snippy_files = list(dir_snippy.glob(f'*{snippy_ext}'))
+        ont_files = list(dir_ont.glob(f'*{ont_ext}'))  # output from coverage subsamples in training is format {name}_{coverage}.vcf
 
         if not snippy_files:
             raise ValueError('Could not find Snippy VCF')
