@@ -693,9 +693,15 @@ class SnippySample(Sample):
         self.logger.debug(f'Processing Snippy variant calls: {self.vcf}')
         self.parse()
 
-        self.logger.debug(f'Breaking COMPLEX variants (except INDEL): {self.vcf}')
         if break_complex:
+            self.logger.debug(f'Breaking COMPLEX variants (excludes INDEL): {self.vcf}')
             self.data = self.break_complex()
+        else:
+            self.logger.debug(
+                f'Not breaking COMPLEX variants (excludes COMPLEX, MNP, INDEL) '
+                f'retaining SNPs only: {self.vcf}'
+            )
+            self.data = self.data[self.data['snp'] == True]
 
     def break_complex(self):
 

@@ -39,7 +39,7 @@ from nanopath.variants import RandomForestFilter
 )
 @click.option(
     '--test_size',
-    is_flag=True,
+    default=0.3,
     type=float,
     help='Test set size in test-train split [0.3]'
 )
