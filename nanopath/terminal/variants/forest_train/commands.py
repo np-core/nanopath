@@ -58,5 +58,7 @@ def forest_train(dir_snippy, dir_ont, outdir, caller, test_size, break_complex, 
         model_prefix=prefix
     )
 
+    ft.logger.info(f"Trained models in: {ft.model_dir}")
+
 
 
