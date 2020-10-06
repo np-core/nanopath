@@ -479,29 +479,29 @@ class RandomForestFilter(PoreLogger):
                 f'Could not detect matching coverage for each file: {coverage_lengths}'
             )
 
-        snippy_reference_names = [f.stem for f in snippy_files]
+        snippy_ref_names = [f.stem.replace(".ref", "").split("_")[0] for f in snippy_files]
 
-        for name in snippy_reference_names:
+        for name in snippy_ref_names:
             if name not in ont_coverage.keys():
                 raise ValueError(f'Could not detect matching ONT calls for Snippy reference sample: {name}')
 
         self.logger.info(
-            f'Detected {len(snippy_reference_names)} matching sample VCFs (Snippy - ONT)'
+            f'Detected {len(snippy_ref_names)} matching sample VCFs (Snippy - ONT)'
         )
 
         comparisons = []
-        for name in snippy_reference_names:
+        for name in snippy_ref_names:
             ont_covs = ont_coverage[name]
             for cov in ont_covs:
                 comparisons.append(
-                    (dir_snippy / f"{name}.vcf", dir_ont / f"{name}_{cov}.vcf")
+                    (dir_snippy / f"{name}_{cov}.ref.vcf", dir_ont / f"{name}_{cov}.vcf")
                 )
 
         if not comparisons:
             raise ValueError('Could not find matching files to compare')
 
         self.logger.info(
-            f"{len(comparisons)} subsampled VCFs (ONT) matched {len(snippy_reference_names)} reference VCFs (Snippy)"
+            f"{len(comparisons)} subsampled VCFs (ONT) matched {len(snippy_ref_names)} reference VCFs (Snippy)"
         )
 
         return comparisons
