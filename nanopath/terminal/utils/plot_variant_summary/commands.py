@@ -4,7 +4,7 @@ from pathlib import Path
 from matplotlib import ticker as mticker
 from matplotlib import pyplot as plt
 import seaborn as sns
-from numpy import log10, linspace
+from numpy import log10, linspace, inf, nan
 
 
 @click.command()
@@ -112,12 +112,27 @@ def plot_variant_summary(
             if varis_order[c] == "apr":
                 dfm['value'] = dfm['value']*100
             else:
-                dfm['value'] = [log10(d) for d in dfm['value'].tolist()]
+                values = []
+                for d in dfm['value'].tolist():
+                    try:
+                        data_log = log10(d)
+                        if data_log == -inf or data_log == inf:
+                            values.append(nan)
+                        else:
+                            values.append(data_log)
+
+                    except RuntimeWarning:
+                        print("This is the value:", d, log10(d))
+                        exit(1)
+
+                dfm['value'] = values
 
             fig.subplots_adjust(hspace=1.5)
 
             ax = axes[c] if nrow == 1 else axes[r][c]
             pal = palettes[c]
+
+            print(dfm)
 
             sns.violinplot(y='value', x=column, hue='variable', data=dfm, color="0.8", ax=ax, palette=pal)
             sns.stripplot(y='value', x=column, hue='variable', data=dfm, jitter=True,

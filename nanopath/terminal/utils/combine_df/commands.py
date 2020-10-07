@@ -33,7 +33,10 @@ from pathlib import Path
 @click.option(
     "--extract_head", "-eh", default="", help="Extract categorical data header names [nf_id,model]", type=str
 )
-def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split, extract_head):
+@click.option(
+    "--clean", "-c", help="Subset model column if present to a single category and remove model column [nf_id,model]", is_flag=True
+)
+def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split, extract_head, clean):
 
     """ Concatenate data frames with the same columns FASTA headers """
 
@@ -59,5 +62,10 @@ def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split,
         output.parent.mkdir(parents=True, exist_ok=True)
 
     print(dfout)
+
+    if clean and 'model' in dfout.columns.tolist():
+        extract_model = dfout['model'].unique().tolist()[0]
+        dfout = dfout[dfout['model'] == extract_model]
+        dfout = dfout.drop(columns="model")
 
     dfout.to_csv(f"{output}", sep=sep_out)
