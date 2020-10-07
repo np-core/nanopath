@@ -422,7 +422,7 @@ class RandomForestFilter(PoreLogger):
         plt.clf()
 
     @staticmethod
-    def get_vcf_files(dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf", ont_ext: str = ".ref.vcf"):
+    def get_vcf_files(dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf", ont_ext: str = ".vcf"):
 
         if not dir_snippy.exists():
             raise ValueError('Could not find Snippy VCF directory')
