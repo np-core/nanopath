@@ -443,9 +443,9 @@ class RandomForestFilter(PoreLogger):
 
         snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
-        snippy_file_names = [f.stem for f in snippy_files]
+        snippy_file_names = [f.name.replace(snippy_ext, "") for f in snippy_files]
         ont_file_names = [f.name for f in ont_files]
-
+        print(snippy_file_names, ont_file_names)
         comparisons = [
             (dir_snippy / name, dir_ont / name)
             for name in snippy_file_names if name in ont_file_names
