@@ -443,7 +443,7 @@ class RandomForestFilter(PoreLogger):
 
         snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
-        snippy_file_names = [f.name for f in snippy_files]
+        snippy_file_names = [f.stem for f in snippy_files]
         ont_file_names = [f.name for f in ont_files]
 
         comparisons = [
