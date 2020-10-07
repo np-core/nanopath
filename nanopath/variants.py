@@ -422,7 +422,7 @@ class RandomForestFilter(PoreLogger):
         plt.clf()
 
     @staticmethod
-    def get_vcf_files(dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf", ont_ext: str = ".vcf"):
+    def get_vcf_files(dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf", ont_ext: str = ".ref.vcf"):
 
         if not dir_snippy.exists():
             raise ValueError('Could not find Snippy VCF directory')
@@ -439,7 +439,7 @@ class RandomForestFilter(PoreLogger):
 
         return snippy_files, ont_files
 
-    def get_evaluation_comparisons(self, dir_snippy, dir_ont, snippy_ext: str = ".vcf"):
+    def get_evaluation_comparisons(self, dir_snippy, dir_ont, snippy_ext: str = ".ref.vcf"):
 
         snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
