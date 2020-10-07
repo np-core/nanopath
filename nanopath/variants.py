@@ -262,11 +262,14 @@ class RandomForestFilter(PoreLogger):
         else:
             return 'false_negative'  # can occur here because we check against prediction, not calls this time
 
-    def prepare_training_data(self, dir_snippy: Path, dir_ont: Path, caller: str = 'clair', break_complex: bool = True):
+    def prepare_training_data(
+        self, dir_snippy: Path, dir_ont: Path, caller: str = 'clair',
+        break_complex: bool = True, snippy_ext: str = ".ref.vcf"
+    ):
 
         """ Prepare SNP validation data from Snippy reference VCFs and Clair / Medaka variant VCFs """
 
-        comparisons = self.get_coverage_comparisons(dir_snippy=dir_snippy, dir_ont=dir_ont)
+        comparisons = self.get_coverage_comparisons(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
         ont_with_truth, snippies = self.get_data_from_comparisons(
             comparisons=comparisons, caller=caller, break_complex=break_complex, outdir=self.training_dir
@@ -436,9 +439,9 @@ class RandomForestFilter(PoreLogger):
 
         return snippy_files, ont_files
 
-    def get_evaluation_comparisons(self, dir_snippy, dir_ont):
+    def get_evaluation_comparisons(self, dir_snippy, dir_ont, snippy_ext: str = ".vcf"):
 
-        snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont)
+        snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
         snippy_file_names = [f.name for f in snippy_files]
         ont_file_names = [f.name for f in ont_files]
@@ -457,9 +460,9 @@ class RandomForestFilter(PoreLogger):
 
         return comparisons
 
-    def get_coverage_comparisons(self, dir_snippy, dir_ont):
+    def get_coverage_comparisons(self, dir_snippy, dir_ont, snippy_ext):
 
-        snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont)
+        snippy_files, ont_files = self.get_vcf_files(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
         # Get ONT call sample names and coverage
         ont_coverage = {}
