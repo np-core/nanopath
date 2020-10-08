@@ -37,7 +37,10 @@ setup(
         "ont_fast5_api",
         "weasyprint",
         "requests",
-        "pyvcf"
+        "pyvcf",
+        "beautifulsoup4",
+        "bcbio-gff",
+        "lxml"
     ],
     entry_points="""
         [console_scripts]
