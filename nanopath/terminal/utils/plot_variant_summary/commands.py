@@ -21,7 +21,7 @@ from numpy import log10, linspace, inf, nan
     "--binary", "-b", type=str, default="ST93", help="Get one value and plot a binary violin by categorical data vs others from column [none]"
 )
 @click.option(
-    "--panels", "-p", type=str, default="model", help="Column in dfs to use as paneling for rows [model]"
+    "--panels", "-p", type=str, default="model", help="Column in data to use as paneling for rows, none for a single category / row panel [model]"
 )
 @click.option(
     "--variables", "-v", type=str, default="default", help="One or multiple y-axis variables to plot [apr=accuracy,precision,recall]"
@@ -47,9 +47,15 @@ from numpy import log10, linspace, inf, nan
 @click.option(
     "--min_value", "-mv", default=0, help="Minimum column value for lower threshold of data", type=float,
 )
+@click.option(
+    "--exclude", "-ex", default="", help="Exclude column,value", type=str,
+)
+@click.option(
+    "--include", "-in", default="", help="Include only column,value", type=str,
+)
 def plot_variant_summary(
         data, output, column, binary, sep, variables, palettes,
-        title_ref, locs, min_column, min_value, legend_size, panels
+        title_ref, locs, min_column, min_value, legend_size, panels, exclude, include
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -71,9 +77,24 @@ def plot_variant_summary(
 
     data_frame = pandas.read_csv(data, sep=sep, header=0)
 
-    panel_rows = sorted(list(
-        set(data_frame[panels].unique().tolist())
-    ))
+    if exclude:
+        print("Exclude: ", exclude)
+        col, val = exclude.split(",")
+        data_frame = data_frame[data_frame[col] != val]
+
+    if include:
+        print("Include: ", include)
+        col, val = include.split(",")
+        data_frame = data_frame[data_frame[col] == val]
+
+    if panels:
+        panel_rows = sorted(list(
+            set(data_frame[panels].unique().tolist())
+        ))
+    else:
+        panels = "tmp"
+        data_frame[panels] = ["base" for _ in data_frame.iterrows()]
+        panel_rows = ["base"]
 
     new_attr = {}
     for a, attr_data in attr.items():
@@ -144,7 +165,7 @@ def plot_variant_summary(
                     if varis_order[c] == "apr" else "ONT vs Illumina reference SNPs (n)"
                 )
             else:
-                ax.set_ylabel("\n")
+                ax.set_ylabel("Illumina reference calls (log10 n)\n")
 
             if r == len(panel_rows)-1:
                 ax.set_xlabel(f"\n{column.upper()}")

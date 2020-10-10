@@ -10,6 +10,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
+
 @click.command()
 @click.option(
     '--alignment',

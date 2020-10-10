@@ -2,20 +2,22 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
-
+import collections
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
 from itertools import permutations
 import pickle
 import vcf
+import pyfastx
 import logging
 from sklearn.metrics import roc_curve
 from sklearn.metrics import precision_recall_curve
 from sklearn.metrics import average_precision_score
+from pysam import VariantFile
 
-from nanopath.utils import PoreLogger
-from nanopath.processors import SnippySample, ClairSample, MedakaSample
+from nanopath.utils import PoreLogger, run_cmd
+from nanopath.processors import SnippySample, ClairSample, MedakaSample, ForestSample
 from pathlib import Path
 
 basesN = ['A', 'C', 'G', 'T']
@@ -69,6 +71,68 @@ def ps(row):
         return None
     else:
         return float(row[row['alt'] + '_ps'])
+
+def read_fasta(fasta: Path) -> dict:
+    return {
+        name: seq.upper() for name, seq in
+        pyfastx.Fasta(str(fasta), build_index=False)  # capital bases
+    }
+
+class CoreGenome:
+
+    def __init__(
+        self,
+        outdir: Path = None,
+        reference: Path = None,
+        prefix: str = 'core'
+    ):
+
+        logging.basicConfig(
+            level=logging.INFO,
+            format=f"[%(asctime)s] [MedakaCore]     %(message)s",
+            datefmt='%H:%M:%S'
+        )
+
+        self.logger = logging.getLogger()
+
+        self.reference = reference
+
+        self.outdir = outdir
+        self.prefix = prefix
+
+        self.samples = []  # all samples
+
+    def parse_snp_vcf(self, path: Path):
+
+        for vcf in sorted([
+            f for f in path.glob('*.vcf')
+        ]):
+            # class used after filtering with the classifiers to construct core genome,
+            # simply considers snps only regardless of variant caller (default)
+            sample = ForestSample(vcf)
+
+            self.logger.info(
+                f'Processed {len(sample.data)} variants in sample: {sample.name}'
+            )
+            self.samples.append(sample)
+
+    def core_genome(
+        self,
+        include_reference: bool = True
+    ):
+
+        """ Determine core variants from Snippy and Medaka samples  """
+
+        # Compute the common core genome SNPs across all VCFs and form into alignment:
+
+        snp_counter = collections.Counter()
+        for sample in self.samples:
+            for chrom_name, data in sample.data.groupby('chromosome'):
+                for _, row in data.iterrows():
+                    snp_counter.update((chrom_name, row['position']))
+
+        print(dict(snp_counter))
+
 
 
 class RandomForestFilter(PoreLogger):

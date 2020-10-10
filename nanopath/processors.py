@@ -767,6 +767,7 @@ class SnippySample(Sample):
             qual = float(rec.qual)
 
             info = rec.info
+            print(info)
             if 'snp' in info['TYPE'] \
                 or 'mnp' in info['TYPE'] \
                     or 'complex' in info['TYPE']:
