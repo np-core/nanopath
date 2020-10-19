@@ -36,7 +36,7 @@ from numpy import log10, linspace, inf, nan
     "--legend_size", "-ls", default=8, help="Legend size", type=int,
 )
 @click.option(
-    "--palettes", "-pa", default="Blues,Purples", help="Color palettes for panels in each row [Blues,Purples]", type=str,
+    "--palettes", "-pa", default="Blues,Purples", help="Color palettes for panels in each row, col [Blues,Purples]", type=str,
 )
 @click.option(
     "--locs", "-l", default="best,upper_left,best,upper_left,upper_left,upper_left", help="Position of legends for plots", type=str,
@@ -60,10 +60,10 @@ def plot_variant_summary(
 
     """ Join two dataframes to add selected trait columns """
 
-    palettes = [s.strip() for s in palettes.split(',')]
 
     attr = dict(
-        locs=[lo.replace("_", " ").strip() for lo in locs.split(",")]
+        locs=[lo.replace("_", " ").strip() for lo in locs.split(",")],
+        palettes=[s.strip() for s in palettes.split(',')]
     )
 
     if variables == "default":
@@ -151,7 +151,7 @@ def plot_variant_summary(
             fig.subplots_adjust(hspace=1.5)
 
             ax = axes[c] if nrow == 1 else axes[r][c]
-            pal = palettes[c]
+            pal = new_attr["palettes"][t]
 
             print(dfm)
 
@@ -186,6 +186,9 @@ def plot_variant_summary(
                 ax.yaxis.set_ticks(
                     [log10(x) for p in range(1, 6) for x in linspace(10 ** p, 10 ** (p + 1), 10)], minor=True
                 )
+            else:
+                ax.set_ylim([0, 110])
+
             t += 1
 
     plt.tight_layout()

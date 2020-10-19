@@ -1,5 +1,6 @@
 import click
 
+from .snp_core import snp_core
 from .snp_distance import snp_distance
 from .forest_filter import forest_filter
 from .forest_train import forest_train
@@ -17,6 +18,7 @@ def variants():
     pass
 
 
+variants.add_command(snp_core)
 variants.add_command(forest_evaluate)
 variants.add_command(forest_train)
 variants.add_command(forest_filter)

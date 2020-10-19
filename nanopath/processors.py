@@ -673,6 +673,60 @@ class Sample(PoreLogger):
         self.logger.info(f'Wrote {written}/{len(records_out)} filtered records to file: {out}')
 
 
+class ForestSample(Sample):
+
+    """ Basic SNP samples only for parsing after Random Forest filter """
+
+    def __init__(self, vcf: Path):
+
+        Sample.__init__(self, vcf=vcf)
+
+        self.parse()
+
+    def parse(self):
+
+        var = 0
+        total = 0
+        calls = []
+        for rec in VariantFile(self.vcf).fetch():
+
+            total += 1
+
+            chromosome = rec.chrom
+            position = int(rec.pos)
+            reference = rec.ref
+            variants = rec.alts  # tuple
+            qual = float(rec.qual)
+
+            # Snippy output VCFs only have variant sites: GT = 1/1
+            try:
+                call = variants[0]
+            except IndexError:
+                self.logger.debug(
+                    f'Could not detect alts for variant in '
+                    f'file {self.vcf} - position {position}'
+                )
+                raise
+
+            # Only applies to SNP
+            if len(call) == 1 and len(reference) == 1:
+                calls.append(dict(
+                    chromosome=chromosome,
+                    position=position,
+                    call=call,
+                    ref=reference,
+                    alt=call,
+                    quality=qual,
+                    snp=True
+                ))
+
+                var += 1
+
+        self.data = pandas.DataFrame(calls).sort_values(
+            ['chromosome', 'position']
+        )
+
+
 class SnippySample(Sample):
 
     """ Snippy samples are called de novo from Illumina """
