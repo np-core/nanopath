@@ -36,6 +36,8 @@ def collect(path, exclude, outdir):
 
     nanoq = ap.collect_statistics(mode="")
 
+    print(nanoq)
+
     if exclude:
         excl = pandas.read_csv(
             exclude, header=None, names=['name']

@@ -1000,7 +1000,7 @@ class AssemblyPipeline(PoreLogger):
 
     def __init__(self, path: Path, outdir: Path):
 
-        PoreLogger.__init__(self)
+        PoreLogger.__init__(self, level=logging.INFO, name="AssemblyCollector")
 
         self.mp = MasterParser()
 
@@ -1023,12 +1023,9 @@ class AssemblyPipeline(PoreLogger):
         ont_medaka_vs_ref = ".medaka.report"
         # Hybrid assembly from polished assembly corrected with Illumina
         hybrid_medaka_vs_ref = ".medaka_hybrid.report"
-        # Hybrid assembly from unpolished assembly corrected with Illumina
-        hybrid_assembly_vs_ref = ".flye_hybrid.report"
 
         ont_files = dnadiff_path.glob("*"+ont_medaka_vs_ref)
         hybrid_medaka_files = dnadiff_path.glob("*"+hybrid_medaka_vs_ref)
-        hybrid_assembly_files = dnadiff_path.glob("*"+hybrid_assembly_vs_ref)
 
         try:
             df_ont = pandas.concat(
@@ -1052,25 +1049,12 @@ class AssemblyPipeline(PoreLogger):
             self.logger.info('Could not detect files for Dnadiff')
             return
 
-        try:
-            df_hybrid_assembly = pandas.concat(
-                [
-                    self.mp.parse_dnadiff(file=f, name_strip=hybrid_assembly_vs_ref)
-                    for f in list(hybrid_assembly_files)
-                ]
-            )
-        except ValueError:
-            self.logger.info('Could not detect files for Dnadiff.')
-            return
-
         if string_sort:
             df_ont = self.str_num_sort_col(df_ont, 'name')
             df_hybrid_medaka = self.str_num_sort_col(df_hybrid_medaka, 'name')
-            df_hybrid_assembly = self.str_num_sort_col(df_hybrid_assembly, 'name')
         else:
             df_ont = df_ont.sort_values('name')
             df_hybrid_medaka = df_hybrid_medaka.sort_values('name')
-            df_hybrid_assembly = df_hybrid_assembly.sort_values('name')
 
         df_ont['branch'] = [
             'ont_medaka' for _ in range(df_ont.__len__())
@@ -1078,12 +1062,9 @@ class AssemblyPipeline(PoreLogger):
         df_hybrid_medaka['branch'] = [
             'hybrid_medaka' for _ in range(df_ont.__len__())
         ]
-        df_hybrid_assembly['branch'] = [
-            'hybrid_assembly' for _ in range(df_ont.__len__())
-        ]
 
         combined = pandas.concat(
-            (df_ont, df_hybrid_medaka, df_hybrid_assembly), axis=0
+            (df_ont, df_hybrid_medaka), axis=0
         )
 
         if exclude:

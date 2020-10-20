@@ -211,6 +211,7 @@ class CoreGenome:
             core_snps = collections.Counter({k: c for k, c in core_snp_count.items() if c >= core_threshold_snps})
             print(core_snps)
 
+
 class RandomForestFilter(PoreLogger):
 
     """ Train a random-forest classifier to filter variant calls (SNP)
