@@ -1,7 +1,7 @@
 import click
 
 from pathlib import Path
-from nanopath.variants import ForestClassifier
+from nanopath.variants import RandomForestFilter
 
 @click.command()
 @click.option(
@@ -10,7 +10,7 @@ from nanopath.variants import ForestClassifier
     help=''
 )
 @click.option(
-    '--stats',
+    '--vcf_dir',
     type=Path,
     help=''
 )
@@ -20,9 +20,9 @@ from nanopath.variants import ForestClassifier
     help=''
 )
 @click.option(
-    '--output',
+    '--outdir',
     type=Path,
-    default='filtered.vcf',
+    default='filtered_calls',
     help=''
 )
 @click.option(
@@ -32,32 +32,29 @@ from nanopath.variants import ForestClassifier
     help=''
 )
 @click.option(
-    '--probability',
-    type=float,
-    default=0,
-    help=''
-)
-@click.option(
     '--mask_weak',
-    is_flag=True,
+    type=float,
+    default=0.8,
     help=''
 )
 def forest_filter(
     vcf,
-    stats,
-    output,
+    vcf_dir,
+    outdir,
     model,
     caller,
-    mask_weak,
-    probability
+    mask_weak
 ):
-    c = ForestClassifier(vcf, stats, output, model, caller, mask_weak, probability)
 
-    pos = c.read_vcf()
-    if pos > 0:
-        c.classify()
-    c.filter()
+    if vcf_dir:
+        ont_vcf = list(vcf_dir.glob("*.vcf"))
+    elif vcf:
+        ont_vcf = [vcf]
+    else:
+        raise ValueError("One of vcf, vcf_dir must be passed as arguments.")
 
+    rff = RandomForestFilter(outdir=outdir)
 
+    rff.filter_vcf(ont_vcf=ont_vcf, model_file=model, caller=caller, mask_weak=mask_weak)
 
 

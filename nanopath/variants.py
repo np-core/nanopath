@@ -72,11 +72,13 @@ def ps(row):
     else:
         return float(row[row['alt'] + '_ps'])
 
+
 def read_fasta(fasta: Path) -> dict:
     return {
         name: seq.upper() for name, seq in
         pyfastx.Fasta(str(fasta), build_index=False)  # capital bases
     }
+
 
 class CoreGenome:
 
@@ -234,12 +236,10 @@ class RandomForestFilter(PoreLogger):
 
         self.outdir = outdir
         self.outdir.mkdir(parents=True, exist_ok=True)
+
         self.model_dir = self.outdir / 'models'
-        self.model_dir.mkdir(parents=True, exist_ok=True)
         self.training_dir = self.outdir / 'training'
-        self.training_dir.mkdir(parents=True, exist_ok=True)
         self.evaluation_dir = self.outdir / 'evaluation'
-        self.evaluation_dir.mkdir(parents=True, exist_ok=True)
 
         self.ont_calls = dict()  # key: sample name, ont calls with truth column [subclass of Sample]
         self.features = dict()  # key: sample name, feature data frame for ont calls
@@ -257,6 +257,105 @@ class RandomForestFilter(PoreLogger):
 
         self.vcf_header = ['CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 'FILTER', 'INFO', 'FORMAT', 'EXTRA']
 
+    def filter_vcf(self, ont_vcf: Path or [Path], model_file: Path, caller: str = "clair", mask_weak: float = 0.8):
+
+        """ Filter a ONT variant VCF files using a trained model """
+
+        if isinstance(ont_vcf, Path):
+            ont_vcf = [ont_vcf]
+
+        model, use_features = self.load_model(model_file=model_file)
+
+        ont_calls = self.read_samples_for_filtering(ont_vcf=ont_vcf, caller="clair")
+
+        _, ont_features = self.parse_features(ont_calls=ont_calls)
+
+        for ont in ont_features:
+            ont = self.predict_with_model(ont, model, use_features, mask_weak=mask_weak)
+            ont.filtered = ont.features[ont.features.prediction == True]
+
+            keep_filtered_variants = [
+                (row['chromosome'], row['position']) for i, row in ont.filtered.iterrows()
+            ]
+
+            nweak = len(ont.filtered[ont.filtered['call'] == "N"])
+            self.logger.info(f"{ont.name}: {nweak} / {len(ont.filtered)} filtered calls had low support (N)")
+
+            with ont.vcf.open('r') as one_pass:
+               vcf_header = vcf.Reader(one_pass)
+
+            vcf_out = self.outdir / f"{ont.name}.filtered.vcf"
+
+            written_check = 0
+            with ont.vcf.open('r') as vcf_unfiltered, vcf_out.open('w') as vcf_filtered:
+                writer = vcf.Writer(vcf_filtered, vcf_header)
+                for record in vcf.Reader(vcf_unfiltered):
+                    if (record.CHROM, record.POS) in keep_filtered_variants:
+                        try:
+                            call = ont.filtered.loc[
+                                (ont.filtered['chromosome'] == record.CHROM) &
+                                (ont.filtered['position'] == record.POS), 'call'
+                            ].values[0]
+                        except IndexError:
+                            self.logger.error(f'Could not find call during filtering at {record.CHROM}: {record.POS}')
+                            raise
+                        if call == 'N':
+                            record.ALT = 'N'
+                        written_check += 1
+                        writer.write_record(record)
+                    else:
+                        continue
+
+            self.logger.info(f'{ont.name}: Wrote {written_check}/{len(ont.filtered)} calls to file: {vcf_out}')
+
+
+    def load_model(self, model_file: Path):
+
+        self.logger.info(f"Load random forest model: {model_file}")
+        with model_file.open('rb') as model_in:
+            model = pickle.load(model_in)
+
+        try:
+            feature_combo = model_file.name.strip(".sav").split(".")[1]
+        except IndexError:
+            self.logger.info(f'Could not extract feature combination identifier from: {model_file.name}')
+            raise
+
+        try:
+            features = self.feature_combinations[feature_combo]
+        except KeyError:
+            self.logger.info(f'Could not find {feature_combo} in native model feature combinations')
+            raise
+
+        return model, features
+
+    @staticmethod
+    def predict_with_model(ont, model, use_features: list, mask_weak: float = 0.8):
+
+        snp_prediction_features = np.array(
+            ont.features[use_features]
+        )
+
+        # Prediction with Random Forest Model
+        snp_prediction = model.predict(snp_prediction_features)
+        snp_prediction_probabilities = model.predict_proba(snp_prediction_features)
+        # column header were switched in original code, but no effect of it downstream
+        snp_probabilities = pd.DataFrame(snp_prediction_probabilities, columns=[False, True])
+        snp_probability = snp_probabilities.max(axis=1)  # extract the corresponding probability
+
+        ont.features['probability'] = snp_probability
+        ont.features['prediction'] = snp_prediction  # here the snp prediction from classifier added
+        # classify the SNP prediction in comparison to the truth value of the (ONT) SNP call
+
+        if mask_weak > 0:
+            weak_calls = [
+                irow['alt'] if irow['ps'] >= mask_weak else 'N'
+                for i, irow in ont.features.iterrows()
+            ]
+            ont.features['call'] = weak_calls
+
+        return ont
+
     def evaluate_model(
         self,
         model_file: Path,
@@ -273,22 +372,9 @@ class RandomForestFilter(PoreLogger):
 
         """ Evaluate RF filter model on Snippy reference VCFs and Clair / Medaka variant VCFs """
 
-        self.logger.info(f"Load random forest model: {model_file}")
-        with model_file.open('rb') as model_in:
-            model = pickle.load(model_in)
+        self.evaluation_dir.mkdir(parents=True, exist_ok=True)
 
-        try:
-            feature_combo = model_file.name.strip(".sav").split(".")[1]
-            self.logger.info(f'Using model feature combination: {feature_combo}')
-        except IndexError:
-            self.logger.info(f'Could not extract feature combination identifier from: {model_file.name}')
-            raise
-
-        try:
-            use_features = self.feature_combinations[feature_combo]
-        except KeyError:
-            self.logger.info(f'Could not find {feature_combo} in native model feature combinations')
-            raise
+        model, use_features = self.load_model(model_file=model_file)
 
         if dir_snippy and dir_ont:
             comparisons = self.get_evaluation_comparisons(dir_snippy=dir_snippy, dir_ont=dir_ont)
@@ -311,50 +397,21 @@ class RandomForestFilter(PoreLogger):
         for i, ont in enumerate(ont_with_features):
             snippy = snippies[i]
             self.logger.info(
-                f"Predict SNP validity using the >{feature_combo}< classifier on sample: {ont.name}"
+                f"Predict SNP validity on sample: {ont.name}"
             )
 
-            snp_prediction_features = np.array(
-                ont.features[use_features]
-            )
+            ont = self.predict_with_model(ont, model, use_features, mask_weak=mask_weak)
 
-            # Prediction with Random Forest Model
-            snp_prediction = model.predict(snp_prediction_features)
-            snp_prediction_probabilities = model.predict_proba(snp_prediction_features)
-            # column header were switched in original code, but no effect of it downstream
-            snp_probabilities = pd.DataFrame(snp_prediction_probabilities, columns=[False, True])
-            snp_probability = snp_probabilities.max(axis=1)  # extract the corresponding probability
+            ont.features['classifier_evaluation'] = ont.features.apply(self.classify_snp_prediction, axis=1)
 
-            ont.features['probability'] = snp_probability
-            ont.features['prediction'] = snp_prediction  # here the snp prediction from classifier added
-            # classify the SNP prediction in comparison to the truth value of the (ONT) SNP call
-            self.logger.info(
-                f"Evaluate classifier performance to sample {ont.name} vs Snippy reference {snippy.name}"
-            )
-
-            if mask_weak > 0:
-                print("MASKING WEAK POSITIONS")
-                ont_features = ont.features.copy()
-                # ont call or N, handled in get_truth_summary
-                ont_features['mask_weak'] = [
-                    irow['alt'] if irow['ps'] >= mask_weak else 'N'
-                    for i, irow in ont_features.iterrows()
-                ]
-            else:
-                ont_features = ont.features.copy()
-
-            # Evaluation processing, weak mask not in snp classifier evaluation!
-
-            ont_features['classifier_evaluation'] = ont_features.apply(self.classify_snp_prediction, axis=1)
-
-            classifier_prediction_evaluations = ont_features.classifier_evaluation.value_counts()
+            classifier_prediction_evaluations = ont.features.classifier_evaluation.value_counts()
 
             classifier_truth_summary = self.get_truth_summary(
                 true_positives=classifier_prediction_evaluations.get('true_positive'),
                 true_negatives=classifier_prediction_evaluations.get('true_negative'),
                 false_positives=classifier_prediction_evaluations.get('false_positive'),
                 false_negatives=classifier_prediction_evaluations.get('false_negative'),
-                snippy=None, ont_data=ont_features, name=ont.name
+                snippy=None, ont_data=ont.features, name=ont.name
             )
             classifier_truth_summaries.append(classifier_truth_summary)
 
@@ -410,6 +467,8 @@ class RandomForestFilter(PoreLogger):
 
         """ Prepare SNP validation data from Snippy reference VCFs and Clair / Medaka variant VCFs """
 
+        self.training_dir.mkdir(parents=True, exist_ok=True)
+
         comparisons = self.get_coverage_comparisons(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
         ont_with_truth, snippies = self.get_data_from_comparisons(
@@ -424,6 +483,8 @@ class RandomForestFilter(PoreLogger):
         self.features_combined.to_csv(self.training_dir / 'training_features.tsv', sep='\t', index=False)
 
     def train_models(self, test_size: float = 0.3, model_prefix: str = "forest_model"):
+
+        self.model_dir.mkdir(parents=True, exist_ok=True)
 
         training_features = self.features_combined
 
@@ -682,6 +743,30 @@ class RandomForestFilter(PoreLogger):
         return ont_with_truth, snippies
 
     @staticmethod
+    def read_samples_for_filtering(ont_vcf: [Path], caller: str = "clair") -> list:
+
+        """ ONT samples to apply filtering model to """
+
+        samples = []
+        for ov in ont_vcf:
+            pysamstats = ov.parent / f"{ov.stem}.txt"  # same dir, same base name
+
+            if not pysamstats.exists():
+                raise ValueError(
+                    f'Could not find associated stats file ({pysamstats}) for calls: {ov.name}'
+                )
+            if caller == "medaka":
+                ont = MedakaSample(vcf=ov, stats=pysamstats)
+            elif caller == "clair":
+                ont = ClairSample(vcf=ov, stats=pysamstats)
+            else:
+                raise ValueError('Caller argument must be one of: clair or medaka')
+
+            samples.append(ont)
+
+        return samples
+
+    @staticmethod
     def read_samples_from_comparison(comparison: tuple, caller: str = "clair", break_complex: bool = True, stats: Path = None):
 
         snippy_vcf, ont_vcf = comparison
@@ -714,10 +799,9 @@ class RandomForestFilter(PoreLogger):
         else:
             data = ont.data
 
-        if "mask_weak" in data.columns.tolist():
-            weak = len(data[data['mask_weak'] == "N"])
-            self.logger.info(f"Found {weak} weak positions in {ont.name}")
-            data = data[data['mask_weak'] != "N"]
+        # Disregard weak positions (N) in comparisons
+        # as per Sanderson et al. (2020)
+        data = data[data['call'] != "N"]
 
         true_snps = snippy.data.merge(
             data, on=['chromosome', 'position'], how='inner',
