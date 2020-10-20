@@ -436,10 +436,12 @@ class MedakaCore:
                 f'Detected a total of {len(unique_snp_positions)} '
                 f'unique variants on {chrom}'
             )
+
             self.logger.info(
                 f'Excluded {len(to_exclude)} variants due to '
                 f'low coverage or gaps on {chrom}'
             )
+
             core_sites[chrom] = [
                 p for p in unique_snp_positions if p not in to_exclude
             ]
@@ -569,6 +571,14 @@ class Sample(PoreLogger):
             for chrom, data in self.data.groupby('chromosome')
         }
 
+    def get_snp_calls(self, chrom: str) -> dict:
+
+        chrom_data = self.data[self.data.chromosome == chrom]
+
+        return {
+            row['position']: {'call': row['call'], 'ref': row['ref']} for i, row in chrom_data.iterrows()
+        }
+
     def replace_variants(self, reference: dict) -> str:
 
         """ Insert filtered (core site) variants into the reference sequence
@@ -677,9 +687,15 @@ class ForestSample(Sample):
 
     """ Basic SNP samples only for parsing after Random Forest filter """
 
-    def __init__(self, vcf: Path):
+    def __init__(self, vcf: Path, stats: Path = None, min_cov: int = 10):
 
         Sample.__init__(self, vcf=vcf)
+
+        self.stats = stats
+        if stats is not None:
+            self.excluded_positions = self.get_excluded_positions()
+
+        self.min_cov = min_cov
 
         self.parse()
 
@@ -725,6 +741,20 @@ class ForestSample(Sample):
         self.data = pandas.DataFrame(calls).sort_values(
             ['chromosome', 'position']
         )
+
+    def get_excluded_positions(self):
+
+        """ Get positions that have no (-) or low coverage (< min_cov) from Pysamstats file  """
+
+        stats = pandas.read_csv(self.stats, sep='\t')
+
+        excluded = {}
+        for chrom, data in stats.groupby('chrom'):
+            low_coverage = data.loc[data['reads_all'] < self.min_cov, 'pos'].tolist()
+            excluded[chrom] = sorted(low_coverage)
+            print(f'Found {len(low_coverage)} low coverage or gap regions.')
+
+        return excluded
 
 
 class SnippySample(Sample):
@@ -821,7 +851,6 @@ class SnippySample(Sample):
             qual = float(rec.qual)
 
             info = rec.info
-            print(info)
             if 'snp' in info['TYPE'] \
                 or 'mnp' in info['TYPE'] \
                     or 'complex' in info['TYPE']:
@@ -871,7 +900,7 @@ class SnippySample(Sample):
             # List of positions containing gaps (-) or
             # regions of low coverage (N) determined by Snippy
             excluded[chrom] = [
-                i for i, s in enumerate(seq, 1) if s == 'N' or s == '-'  # TODO: fix here not in ATCG
+                i for i, s in enumerate(seq, 1) if s not in ('A', 'C', 'T', 'G')  # TODO: fix here not in ATCG
             ]  # 1-based indexing of sites to match VCF
 
         return excluded

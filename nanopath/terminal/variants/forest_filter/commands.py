@@ -55,6 +55,8 @@ def forest_filter(
 
     rff = RandomForestFilter(outdir=outdir)
 
+
+    # TODO: add multi-threading
     rff.filter_vcf(ont_vcf=ont_vcf, model_file=model, caller=caller, mask_weak=mask_weak)
 
 

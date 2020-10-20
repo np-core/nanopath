@@ -80,7 +80,7 @@ def read_fasta(fasta: Path) -> dict:
     }
 
 
-class CoreGenome:
+class HybridCoreGenome:
 
     def __init__(
         self,
@@ -91,7 +91,7 @@ class CoreGenome:
 
         logging.basicConfig(
             level=logging.INFO,
-            format=f"[%(asctime)s] [MedakaCore]     %(message)s",
+            format=f"[%(asctime)s] [HybridCore]     %(message)s",
             datefmt='%H:%M:%S'
         )
 
@@ -102,9 +102,28 @@ class CoreGenome:
         self.outdir = outdir
         self.prefix = prefix
 
+        self.snippy = []
+        self.ont = []
         self.samples = []  # all samples
 
-    def parse_snp_vcf(self, path: Path, vcf_glob: str = "*.vcf"):
+    def parse_snippy_vcf(self, path: Path, vcf_glob: str = "*.vcf", break_complex: bool = False):
+
+        # min cov already done in snippy calls,
+        # using aligned (gapped, mincoved) seq file
+        for vcf in sorted([
+            f for f in path.glob(vcf_glob)
+        ]):
+            # Process Snippy VCF + aligned reference genome
+            # to define excluded (non-core) positions
+            alignment_fasta = vcf.parent / f'{vcf.stem}.aligned.fa'
+            ss = SnippySample(vcf=vcf, aligned=alignment_fasta, break_complex=break_complex)
+
+            self.logger.info(
+                f'Processed {len(ss.data)} SNPs in sample: {ss.name}'
+            )
+            self.snippy.append(ss)
+
+    def parse_ont_vcf(self, path: Path, min_cov: int = 10, vcf_glob: str = "*.vcf"):
 
         for vcf in sorted([
             f for f in path.glob(vcf_glob)
@@ -112,106 +131,127 @@ class CoreGenome:
             # class used after filtering with the classifiers to construct core genome,
             # simply considers snps only regardless of variant caller (default)
 
-            sample = ForestSample(vcf)
+            pysamstats = vcf.parent / f'{vcf.stem}.txt'
+            fs = ForestSample(vcf, stats=pysamstats, min_cov=min_cov)
 
             self.logger.info(
-                f'Parsed {len(sample.data)} SNPs from sample {sample.name}'
+                f'Processed {len(fs.data)} SNPs in sample: {fs.name}'
             )
-            self.samples.append(sample)
+            self.ont.append(fs)
 
-    def core_genome(
-        self,
-        allow_missing: float = 0.2,
-        missing_char: str = "N",
-        snp_limit: int = 0,
-        include_reference: bool = True
-    ):
+    def find_core_genome_sites(self):
 
-        """ Determine core variants from Snippy and Medaka samples  """
+        """ Determine core variants from Snippy calls and de novo filtered calls (ONT)  """
 
-        # Compute the common core genome SNPs across all VCFs and form into alignment:
+        # Compute the core genome SNPs across all VCFs and form into alignment:
 
-        snp_counts = {}
+        snp_positions = {}
         for sample in self.samples:
-            if snp_limit > 0 and len(sample.data) > snp_limit:
-                continue
-
-            chrom_snps = {}
-            for chrom_name, data in sample.data.groupby('chromosome'):
-                chrom_snp_counter = {}
-                for _, row in data.iterrows():
-                    try:
-                        chrom_position = row['position']
-                    except (KeyError):
-                        raise ValueError(
-                            f"Could not parse SNP (index: {_}) on chromosome {chrom_name} in sample {sample.name}"
-                        )
-                    if chrom_position not in chrom_snp_counter.keys():
-                        chrom_snp_counter[chrom_position] = 1
-                    else:
-                        chrom_snp_counter[chrom_position] += 1
-
-                snp_counter = collections.Counter(chrom_snp_counter)
-                chrom_snps[chrom_name] = snp_counter
-                self.logger.debug(
-                    f"Sample: {sample.name} Chromosome: {chrom_name}, SNPs counted {len(snp_counter)}"
-                )
-
-            snp_counts[sample.name] = chrom_snps
-
-        self.logger.info(f"Parsed {len(snp_counts)} samples for core genome alignment")
-
-        if len(snp_counts) == 0:
-            raise ValueError(f'Could not parse SNPs with limit: {snp_limit}')
-
-
-        # Sort by chromosome across samples:
-        core_chromosomes = {}
-        for sample_name, chrom_snp_counters in snp_counts.items():
-            for chrom_name, counts in chrom_snp_counters.items():
-                sample_snps = {'sample': sample_name, 'snp_count': counts}
-                if chrom_name not in core_chromosomes.keys():
-                    core_chromosomes[chrom_name] = [sample_snps]
+            for chrom, positions in sample.get_snp_positions().items():
+                if chrom in snp_positions.keys():
+                    snp_positions[chrom] += positions
                 else:
-                    core_chromosomes[chrom_name].append(sample_snps)
+                    snp_positions[chrom] = positions
 
-        # Check number of samples and compute SNP counts for each chromosome:
-        self.logger.info(f"Parsed {len(core_chromosomes)} chromosomes for core genome alignment")
-        core_snp_counts = {}
-        core_sample_names = {}
-        for chrom_name, sample_snps in core_chromosomes.items():
-            self.logger.info(f"Chromosome: {chrom_name} --> {len(sample_snps)} samples")
-            if len(sample_snps) != len(snp_counts):
-                self.logger.warning(
-                    f"There are {len(sample_snps)} / {len(snp_counts)} total samples for chromosome {chrom_name}"
-                )
-            if chrom_name not in core_snp_counts.keys():
-                core_snp_counts[chrom_name] = collections.Counter(
-                    sample_snps[0]['snp_count']
-                )
-                for sample_data in sample_snps[1:]:
-                    core_snp_counts[chrom_name].update(
-                        collections.Counter(sample_data['snp_count'])
-                    )
+        for chrom, positions in snp_positions.items():
+            unique_snps = sorted(list(set(positions)))
+            self.logger.info(f"{chrom}: {len(unique_snps)} SNPs")
+            for sample in self.samples:
+                # Create a pseudo-sequence of the SNPs present in sample:
+                seq = ''
+                sample_snps = sample.get_snp_calls(chrom=chrom)  # pos on chrom: {call: call, ref: ref}   # call == alt
+                for pos in unique_snps:
+                    if pos not in sample_snps.keys():
+                        seq += '-'
+                    else:
+                        seq += sample_snps[pos]['call']
 
-            core_sample_names[chrom_name] = [sample_data['sample'] for sample_data in sample_snps]
+                print(f"Sample: {sample}")
+                print(seq)
 
-            print(
-                f"Unique SNPs across all samples ({len(core_sample_names[chrom_name])}) "
-                f"on chromosome {chrom_name}: {len(core_snp_counts[chrom_name])}"
-            )
 
-        for chrom_name, core_snp_count in core_snp_counts.items():
-            allow_missing_snps = int(len(core_sample_names[chrom_name]) * allow_missing)
-            core_threshold_snps = len(core_sample_names[chrom_name]) - allow_missing_snps
-            self.logger.info(
-                f"Allowing fo {allow_missing*100}% missing SNPs ({allow_missing_snps}) across samples"
-            )
-            self.logger.info(
-                f"Core genome alignment threshold for inclusion: {core_threshold_snps} SNPs)"
-            )
-            core_snps = collections.Counter({k: c for k, c in core_snp_count.items() if c >= core_threshold_snps})
-            print(core_snps)
+        #     if snp_limit > 0 and len(sample.data) > snp_limit:
+        #         continue
+        #
+        #     chrom_snps = {}
+        #     for chrom_name, data in sample.data.groupby('chromosome'):
+        #         chrom_snp_counter = {}
+        #         for _, row in data.iterrows():
+        #             try:
+        #                 chrom_position = row['position']
+        #             except (KeyError):
+        #                 raise ValueError(
+        #                     f"Could not parse SNP (index: {_}) on chromosome {chrom_name} in sample {sample.name}"
+        #                 )
+        #             if chrom_position not in chrom_snp_counter.keys():
+        #                 chrom_snp_counter[chrom_position] = 1
+        #             else:
+        #                 chrom_snp_counter[chrom_position] += 1
+        #
+        #         snp_counter = collections.Counter(chrom_snp_counter)
+        #         chrom_snps[chrom_name] = snp_counter
+        #         self.logger.debug(
+        #             f"Sample: {sample.name} Chromosome: {chrom_name}, SNPs counted {len(snp_counter)}"
+        #         )
+        #
+        #     snp_counts[sample.name] = chrom_snps
+        #
+        # self.logger.info(f"Parsed {len(snp_counts)} samples for core genome alignment")
+        #
+        # if len(snp_counts) == 0:
+        #     raise ValueError(f'Could not parse SNPs with limit: {snp_limit}')
+        #
+        # # Sort by chromosome across samples:
+        # core_chromosomes = {}
+        # for sample_name, chrom_snp_counters in snp_counts.items():
+        #     for chrom_name, counts in chrom_snp_counters.items():
+        #         sample_snps = {'sample': sample_name, 'snp_count': counts}
+        #         if chrom_name not in core_chromosomes.keys():
+        #             core_chromosomes[chrom_name] = [sample_snps]
+        #         else:
+        #             core_chromosomes[chrom_name].append(sample_snps)
+        #
+        # # Check number of samples and compute SNP counts for each chromosome:
+        # self.logger.info(f"Parsed {len(core_chromosomes)} chromosomes for core genome alignment")
+        # core_snp_counts = {}
+        # core_sample_names = {}
+        # for chrom_name, sample_snps in core_chromosomes.items():
+        #     self.logger.info(f"Chromosome: {chrom_name} --> {len(sample_snps)} samples")
+        #     if len(sample_snps) != len(snp_counts):
+        #         self.logger.warning(
+        #             f"There are {len(sample_snps)} / {len(snp_counts)} total samples for chromosome {chrom_name}"
+        #         )
+        #     if chrom_name not in core_snp_counts.keys():
+        #         core_snp_counts[chrom_name] = collections.Counter(
+        #             sample_snps[0]['snp_count']
+        #         )
+        #         for sample_data in sample_snps[1:]:
+        #             core_snp_counts[chrom_name].update(
+        #                 collections.Counter(sample_data['snp_count'])
+        #             )
+        #
+        #     core_sample_names[chrom_name] = [sample_data['sample'] for sample_data in sample_snps]
+        #
+        #     print(
+        #         f"Unique SNPs across all samples ({len(core_sample_names[chrom_name])}) "
+        #         f"on chromosome {chrom_name}: {len(core_snp_counts[chrom_name])}"
+        #     )
+        #
+        # for chrom_name, core_snp_count in core_snp_counts.items():
+        #     allow_missing_snps = int(len(core_sample_names[chrom_name]) * allow_missing)
+        #     core_threshold_snps = len(core_sample_names[chrom_name]) - allow_missing_snps
+        #     self.logger.info(
+        #         f"Allowing for {allow_missing*100}% missing SNPs ({allow_missing_snps}) across samples"
+        #     )
+        #     self.logger.info(
+        #         f"Core genome alignment threshold for inclusion: {core_threshold_snps} SNPs)"
+        #     )
+        #
+        #     self.logger.info(
+        #         f"There are {len()} total unique SNP positions on chromosome: {chrom_name}"
+        #     )
+        #     core_snps = collections.Counter({k: c for k, c in core_snp_count.items() if c >= core_threshold_snps})
+        #     print(core_snps)
 
 
 class RandomForestFilter(PoreLogger):
@@ -266,11 +306,24 @@ class RandomForestFilter(PoreLogger):
 
         model, use_features = self.load_model(model_file=model_file)
 
-        ont_calls = self.read_samples_for_filtering(ont_vcf=ont_vcf, caller="clair")
+        for ov in ont_vcf:
 
-        _, ont_features = self.parse_features(ont_calls=ont_calls)
+            pysamstats = ov.parent / f"{ov.stem}.txt"  # same dir, same base name
 
-        for ont in ont_features:
+            if not pysamstats.exists():
+                raise ValueError(
+                    f'Could not find associated stats file ({pysamstats}) for calls: {ov.name}'
+                )
+
+            if caller == "medaka":
+                ont = MedakaSample(vcf=ov, stats=pysamstats)
+            elif caller == "clair":
+                ont = ClairSample(vcf=ov, stats=pysamstats)
+            else:
+                raise ValueError('Caller argument must be one of: clair or medaka')
+
+            _, ont_features = self.parse_features(ont=ont)
+
             ont = self.predict_with_model(ont, model, use_features, mask_weak=mask_weak)
             ont.filtered = ont.features[ont.features.prediction == True]
 
@@ -743,30 +796,6 @@ class RandomForestFilter(PoreLogger):
         return ont_with_truth, snippies
 
     @staticmethod
-    def read_samples_for_filtering(ont_vcf: [Path], caller: str = "clair") -> list:
-
-        """ ONT samples to apply filtering model to """
-
-        samples = []
-        for ov in ont_vcf:
-            pysamstats = ov.parent / f"{ov.stem}.txt"  # same dir, same base name
-
-            if not pysamstats.exists():
-                raise ValueError(
-                    f'Could not find associated stats file ({pysamstats}) for calls: {ov.name}'
-                )
-            if caller == "medaka":
-                ont = MedakaSample(vcf=ov, stats=pysamstats)
-            elif caller == "clair":
-                ont = ClairSample(vcf=ov, stats=pysamstats)
-            else:
-                raise ValueError('Caller argument must be one of: clair or medaka')
-
-            samples.append(ont)
-
-        return samples
-
-    @staticmethod
     def read_samples_from_comparison(comparison: tuple, caller: str = "clair", break_complex: bool = True, stats: Path = None):
 
         snippy_vcf, ont_vcf = comparison
@@ -899,10 +928,13 @@ class RandomForestFilter(PoreLogger):
         return results
 
     @staticmethod
-    def parse_features(ont_calls: list = None):
+    def parse_features(ont_calls: list = None, ont=None):
 
         # False positives, no chained assignments, therefore disable warning
         pd.options.mode.chained_assignment = None
+
+        if ont is not None:
+            ont_calls = [ont]
 
         features = []
         sample_features = []
@@ -966,6 +998,10 @@ class RandomForestFilter(PoreLogger):
             sample_features.append(sample)
 
             features.append(chromosome_features)
+
+        if ont is not None:
+            features = features[0]
+            sample_features = sample_features[0]
 
         return features, sample_features
 
