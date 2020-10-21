@@ -18,10 +18,22 @@ from nanopath.variants import HybridCoreGenome
     help='Path to .vcf from RandomForest filtered ONT calls [ont/]'
 )
 @click.option(
+    '--reference',
+    default=None,
+    type=Path,
+    help='Reference genome for full SNP alignment [none]'
+)
+@click.option(
     '--vcf_glob',
     default="*.vcf",
     type=str,
     help='Glob of VCFs in --vcf_path to construct core genome from  ["*.vcf"]'
+)
+@click.option(
+    '--min_cov',
+    default=5,
+    type=int,
+    help='Minimum coverage in ONT reference mapping to allow a core SNP site across all isolates; disable with -1 [5]'
 )
 @click.option(
     '--prefix',
@@ -29,11 +41,11 @@ from nanopath.variants import HybridCoreGenome
     default="core",
     help='Prefix for output alignment and VCF'
 )
-def snp_core(vcf_snippy, vcf_ont, vcf_glob, prefix):
+def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix):
 
-    cg = HybridCoreGenome()
+    cg = HybridCoreGenome(prefix=prefix, reference=reference)
 
-    # cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=False)  # only consider snps
-    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=10)
-    #
-    # cg.find_core_genome_sites()
+    cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=False)  # only consider snps
+    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=5)  # min_cov -1 do not assess low cov / gaps in ONT
+
+    cg.call_hybrid_core()

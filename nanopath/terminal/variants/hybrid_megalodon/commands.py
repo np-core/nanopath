@@ -14,7 +14,7 @@ from nanopath.processors import MegalodonCore
 @click.option(
     '--vcf_snippy',
     type=Path,
-    help='Path to core variant output VCF file from Snippy'
+    help='Path to core variant output VCF file from SnippyCore'
 )
 @click.option(
     '--vcf_megalodon',
@@ -71,7 +71,7 @@ from nanopath.processors import MegalodonCore
     default='megalodon',
     help='Prefix for main output files [megalodon]'
 )
-def call_megalodon(
+def hybrid_megalodon(
     megalodon_directory,
     vcf_megalodon,
     vcf_snippy,
@@ -130,4 +130,5 @@ def call_megalodon(
     if full and reference:
         sc.create_full_alignment(
             reference=reference,
-            fasta=outdir / f'{prefix+"." if prefix else ""}full.fasta')
+            fasta=outdir / f'{prefix+"." if prefix else ""}full.fasta'
+        )

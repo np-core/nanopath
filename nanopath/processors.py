@@ -272,7 +272,7 @@ class MegalodonCore:
                     f'genotype list, this should not be the case.'
                 )
                 exit(1)
-            genotypes[sample.name] = sample.get_genotypes()
+            genotypes[sample.name] = sample.get_genotype()
 
         # Insert calls into reference sequences and output to FASTA
         # Multiple chromosomes are concatenated into a single sequence
@@ -687,15 +687,16 @@ class ForestSample(Sample):
 
     """ Basic SNP samples only for parsing after Random Forest filter """
 
-    def __init__(self, vcf: Path, stats: Path = None, min_cov: int = 10):
+    def __init__(self, vcf: Path, stats: Path = None, min_cov: int = -1):
 
         Sample.__init__(self, vcf=vcf)
 
+        self.min_cov = min_cov
+
         self.stats = stats
-        if stats is not None:
+        if stats is not None:  # if min_cov = -1 return empty dict
             self.excluded_positions = self.get_excluded_positions()
 
-        self.min_cov = min_cov
 
         self.parse()
 
@@ -750,9 +751,13 @@ class ForestSample(Sample):
 
         excluded = {}
         for chrom, data in stats.groupby('chrom'):
-            low_coverage = data.loc[data['reads_all'] < self.min_cov, 'pos'].tolist()
+            if self.min_cov != -1:
+                low_coverage = data.loc[data['reads_all'] < self.min_cov, 'pos'].tolist()
+            else:
+                low_coverage = []
+
             excluded[chrom] = sorted(low_coverage)
-            print(f'Found {len(low_coverage)} low coverage or gap regions.')
+            self.logger.info(f'{self.name}: found {len(low_coverage)} low coverage or gap regions')
 
         return excluded
 
@@ -1079,6 +1084,8 @@ class MegalodonSample(Sample):
 
     def __init__(self, vcf: Path):
         Sample.__init__(self, vcf=vcf)
+
+        self.name = vcf.parent.name  # Megalodon sampels are parsed directly from result folders (named)
 
         self.logger.info(f'Processing Megalodon variant calls:: {self.name}')
         self.parse()

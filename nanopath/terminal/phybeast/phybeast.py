@@ -3,7 +3,6 @@ import click
 from .utils import utils
 from .call_clair import call_clair
 from .call_medaka import call_medaka
-from .call_megalodon import call_megalodon
 
 VERSION = "1"
 
@@ -16,7 +15,6 @@ def phybeast():
 
     pass
 
-phybeast.add_command(call_megalodon)
 phybeast.add_command(call_medaka)
 phybeast.add_command(call_clair)
 phybeast.add_command(utils)

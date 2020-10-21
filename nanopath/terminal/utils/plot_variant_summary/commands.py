@@ -114,11 +114,15 @@ def plot_variant_summary(
     )
 
     t = 0
-    for r, _ in enumerate(panel_rows):
+    summaries = []
+    for r, model in enumerate(panel_rows):
         for c, var in enumerate(varis):
 
             # subset data to correct panel row value (e.g. model)
             df = data_frame.loc[data_frame[panels] == panel_rows[r], :]
+            #
+            # print(model, var)
+            # print(df[column].value_counts())
 
             if min_column:
                 df = df[df[min_column] > min_value]
@@ -132,7 +136,15 @@ def plot_variant_summary(
 
             if varis_order[c] == "apr":
                 dfm['value'] = dfm['value']*100
+                summaries.append(
+                    print_model_summary(dfm, column=column, model=model) # statistics
+                )
             else:
+                summaries.append(
+                    print_model_summary(dfm, column=column, model=model)  # raw counts
+                )
+
+                # log10 for better scaling
                 values = []
                 for d in dfm['value'].tolist():
                     try:
@@ -153,7 +165,7 @@ def plot_variant_summary(
             ax = axes[c] if nrow == 1 else axes[r][c]
             pal = new_attr["palettes"][t]
 
-            print(dfm)
+            # print(dfm)
 
             sns.violinplot(y='value', x=column, hue='variable', data=dfm, color="0.8", ax=ax, palette=pal)
             sns.stripplot(y='value', x=column, hue='variable', data=dfm, jitter=True,
@@ -191,5 +203,35 @@ def plot_variant_summary(
 
             t += 1
 
+    summary = pandas.concat(summaries).sort_values(['model', 'group'])
+
+    print(summary)
+
     plt.tight_layout()
     fig.savefig(f'{output}')
+
+
+def print_model_summary(df: pandas.DataFrame, column: str, model: str):
+
+    """ melted """
+
+    summary_df = []
+    for group, data in df.groupby(column):
+        # Group by ST93 or Other with the binary option
+        for measure, d in data.groupby('variable'):
+            mean = d.value.mean()
+            sd = d.value.std()
+            median = d.value.median()
+            row = {
+                'model': model,
+                'group': group,
+                'measure': measure,
+                'median': median,
+                'mean': mean,
+                'sd': sd
+            }
+            summary_df.append(row)
+
+    summary = pandas.DataFrame(summary_df).sort_values(['model', 'group'])
+
+    return summary

@@ -3,7 +3,6 @@ import click
 from .dataset import dataset
 from .beastling import beastling
 from .pathogen import pathogen
-from .signal import signal
 from .netflow import netflow
 from .utils import utils
 from .phybeast import phybeast
@@ -25,7 +24,6 @@ terminal_client.add_command(dataset)
 terminal_client.add_command(beastling)
 terminal_client.add_command(pathogen)
 terminal_client.add_command(utils)
-terminal_client.add_command(signal)
 terminal_client.add_command(survey)
 terminal_client.add_command(netflow)
 terminal_client.add_command(phybeast)

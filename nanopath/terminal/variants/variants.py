@@ -1,6 +1,7 @@
 import click
 
-from .snp_core import snp_core
+from .hybrid_megalodon import hybrid_megalodon
+from .hybrid_denovo import hybrid_denovo
 from .snp_distance import snp_distance
 from .forest_filter import forest_filter
 from .forest_train import forest_train
@@ -18,7 +19,8 @@ def variants():
     pass
 
 
-variants.add_command(snp_core)
+variants.add_command(hybrid_megalodon)
+variants.add_command(hybrid_denovo)
 variants.add_command(forest_evaluate)
 variants.add_command(forest_train)
 variants.add_command(forest_filter)

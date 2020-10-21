@@ -123,7 +123,7 @@ class HybridCoreGenome:
             )
             self.snippy.append(ss)
 
-    def parse_ont_vcf(self, path: Path, min_cov: int = 10, vcf_glob: str = "*.vcf"):
+    def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf"):
 
         for vcf in sorted([
             f for f in path.glob(vcf_glob)
@@ -132,6 +132,14 @@ class HybridCoreGenome:
             # simply considers snps only regardless of variant caller (default)
 
             pysamstats = vcf.parent / f'{vcf.stem}.txt'
+
+            # Low coverage samples on nanopore induce many (100k +) low coverage regions
+            # which are later excluded in the SNP calls - to accommodate low
+            # coverage multiplex isolates, try:
+            #   - use only Snippy low coverage sites  <-- this is similar to low threshold
+            #   - use lower min_cov threshold  <-- this seems to work
+            #   - exclude low coverage isolates <-- prefer not to
+
             fs = ForestSample(vcf, stats=pysamstats, min_cov=min_cov)
 
             self.logger.info(
@@ -139,119 +147,143 @@ class HybridCoreGenome:
             )
             self.ont.append(fs)
 
-    def find_core_genome_sites(self):
+    def call_hybrid_core(
+        self,
+        include_reference: bool = True
+    ):
 
-        """ Determine core variants from Snippy calls and de novo filtered calls (ONT)  """
+        """ Determine core variants from Snippy and Medaka samples  """
 
-        # Compute the core genome SNPs across all VCFs and form into alignment:
+        # Merge samples from Snippy and ONT
 
+        samples = self.snippy + self.ont
+
+        exclude = {}
         snp_positions = {}
-        for sample in self.samples:
+        for sample in samples:
+            # For each  chromosome add the excluded positions to a
+            # dictionary of chromosome: excluded sites for all samples
+            for chrom, excluded_positions in sample.excluded_positions.items():
+                if chrom not in exclude.keys():
+                    exclude[chrom] = excluded_positions
+                else:
+                    exclude[chrom] += excluded_positions
+
+            # For each chromosome, add the called positions to a dictionary
+            # of chromosome: called positions for all samples
             for chrom, positions in sample.get_snp_positions().items():
                 if chrom in snp_positions.keys():
                     snp_positions[chrom] += positions
                 else:
                     snp_positions[chrom] = positions
 
-        for chrom, positions in snp_positions.items():
-            unique_snps = sorted(list(set(positions)))
-            self.logger.info(f"{chrom}: {len(unique_snps)} SNPs")
-            for sample in self.samples:
-                # Create a pseudo-sequence of the SNPs present in sample:
-                seq = ''
-                sample_snps = sample.get_snp_calls(chrom=chrom)  # pos on chrom: {call: call, ref: ref}   # call == alt
-                for pos in unique_snps:
-                    if pos not in sample_snps.keys():
-                        seq += '-'
-                    else:
-                        seq += sample_snps[pos]['call']
+        # For each chromosomes, determine the sites to exclude across all samples
+        # corresponding to called sites that fall into low coverage or gaps
+        # in any sample (non core sites)
+        snps_to_exclude = {}
+        for chrom, excluded_sites in exclude.items():
+            snps_to_exclude[chrom] = \
+                set(snp_positions[chrom]).intersection(
+                    pd.Series(excluded_sites).unique().tolist()
+                )
 
-                print(f"Sample: {sample}")
-                print(seq)
+        # For each chromosome, determine the unique sites across all samples
+        # and check how many of them fall into non-core sites, then
+        # remove from unique sites to get the final core sites:
+        core_sites = {}
+        for chrom, to_exclude in snps_to_exclude.items():
+            unique_snp_positions = pd.Series(
+                snp_positions[chrom]
+            ).unique().tolist()
 
+            self.logger.info(
+                f'Detected a total of {len(unique_snp_positions)} '
+                f'unique variants on {chrom}'
+            )
 
-        #     if snp_limit > 0 and len(sample.data) > snp_limit:
-        #         continue
-        #
-        #     chrom_snps = {}
-        #     for chrom_name, data in sample.data.groupby('chromosome'):
-        #         chrom_snp_counter = {}
-        #         for _, row in data.iterrows():
-        #             try:
-        #                 chrom_position = row['position']
-        #             except (KeyError):
-        #                 raise ValueError(
-        #                     f"Could not parse SNP (index: {_}) on chromosome {chrom_name} in sample {sample.name}"
-        #                 )
-        #             if chrom_position not in chrom_snp_counter.keys():
-        #                 chrom_snp_counter[chrom_position] = 1
-        #             else:
-        #                 chrom_snp_counter[chrom_position] += 1
-        #
-        #         snp_counter = collections.Counter(chrom_snp_counter)
-        #         chrom_snps[chrom_name] = snp_counter
-        #         self.logger.debug(
-        #             f"Sample: {sample.name} Chromosome: {chrom_name}, SNPs counted {len(snp_counter)}"
-        #         )
-        #
-        #     snp_counts[sample.name] = chrom_snps
-        #
-        # self.logger.info(f"Parsed {len(snp_counts)} samples for core genome alignment")
-        #
-        # if len(snp_counts) == 0:
-        #     raise ValueError(f'Could not parse SNPs with limit: {snp_limit}')
-        #
-        # # Sort by chromosome across samples:
-        # core_chromosomes = {}
-        # for sample_name, chrom_snp_counters in snp_counts.items():
-        #     for chrom_name, counts in chrom_snp_counters.items():
-        #         sample_snps = {'sample': sample_name, 'snp_count': counts}
-        #         if chrom_name not in core_chromosomes.keys():
-        #             core_chromosomes[chrom_name] = [sample_snps]
-        #         else:
-        #             core_chromosomes[chrom_name].append(sample_snps)
-        #
-        # # Check number of samples and compute SNP counts for each chromosome:
-        # self.logger.info(f"Parsed {len(core_chromosomes)} chromosomes for core genome alignment")
-        # core_snp_counts = {}
-        # core_sample_names = {}
-        # for chrom_name, sample_snps in core_chromosomes.items():
-        #     self.logger.info(f"Chromosome: {chrom_name} --> {len(sample_snps)} samples")
-        #     if len(sample_snps) != len(snp_counts):
-        #         self.logger.warning(
-        #             f"There are {len(sample_snps)} / {len(snp_counts)} total samples for chromosome {chrom_name}"
-        #         )
-        #     if chrom_name not in core_snp_counts.keys():
-        #         core_snp_counts[chrom_name] = collections.Counter(
-        #             sample_snps[0]['snp_count']
-        #         )
-        #         for sample_data in sample_snps[1:]:
-        #             core_snp_counts[chrom_name].update(
-        #                 collections.Counter(sample_data['snp_count'])
-        #             )
-        #
-        #     core_sample_names[chrom_name] = [sample_data['sample'] for sample_data in sample_snps]
-        #
-        #     print(
-        #         f"Unique SNPs across all samples ({len(core_sample_names[chrom_name])}) "
-        #         f"on chromosome {chrom_name}: {len(core_snp_counts[chrom_name])}"
-        #     )
-        #
-        # for chrom_name, core_snp_count in core_snp_counts.items():
-        #     allow_missing_snps = int(len(core_sample_names[chrom_name]) * allow_missing)
-        #     core_threshold_snps = len(core_sample_names[chrom_name]) - allow_missing_snps
-        #     self.logger.info(
-        #         f"Allowing for {allow_missing*100}% missing SNPs ({allow_missing_snps}) across samples"
-        #     )
-        #     self.logger.info(
-        #         f"Core genome alignment threshold for inclusion: {core_threshold_snps} SNPs)"
-        #     )
-        #
-        #     self.logger.info(
-        #         f"There are {len()} total unique SNP positions on chromosome: {chrom_name}"
-        #     )
-        #     core_snps = collections.Counter({k: c for k, c in core_snp_count.items() if c >= core_threshold_snps})
-        #     print(core_snps)
+            self.logger.info(
+                f'Excluded {len(to_exclude)} variants due to '
+                f'low coverage or gaps on {chrom}'
+            )
+
+            core_sites[chrom] = [
+                p for p in unique_snp_positions if p not in to_exclude
+            ]
+            self.logger.info(
+                f'Keeping {len(core_sites[chrom])} core variants on {chrom}'
+            )
+
+        # Create the filtered core genome sites for storage
+        # in filtered data attribute, and output of sites to VCF
+        all_core_data = []
+        self.logger.info('Processing core variant calls')
+        for sample in samples:
+            filtered = []
+            for chrom, data in sample.data.groupby('chromosome'):
+                filtered.append(
+                    data[data['position'].isin(core_sites[chrom])]
+                )
+            sample.data_core = pd.concat(filtered)
+            all_core_data.append(sample.data_core)
+
+        # SNP Output
+
+        # Get a table of unique core sites and their associated data:
+        self.logger.info(
+            f'Writing full core variant table to: {self.prefix}.tsv'
+        )
+        core_site_data = pd.concat(all_core_data).drop_duplicates(
+            ignore_index=True, subset=['chromosome', 'position']
+        )
+
+        core_site_table = core_site_data[
+            ['chromosome', 'position', 'ref', 'alt']
+        ].sort_values(['chromosome', 'position'])
+
+        core_site_table.to_csv(f'{self.prefix}.tsv', sep='\t', index=False)
+
+        # Read the reference sequence used for alignment
+        ref = read_fasta(self.reference)
+
+        # For each sample insert the called variant / reference allele
+        # into the reference sequence, concatenate chromosomes and write
+        # to file:
+
+        self.logger.info(
+            f'Writing full core variant alignment to: {self.prefix}.full.aln'
+        )
+
+        with open(f'{self.prefix}.full.aln', 'w') as full_alignment:
+            for sample in samples:
+                seq_concat = sample.replace_variants(reference=ref)
+                full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
+
+            if include_reference:
+                ref_seq = ''.join(ref[key]for key in sorted(ref.keys()))
+                full_alignment.write(f'>Reference\n{ref_seq}\n')
+
+        # Use snp-sites to extract the final core variant site alignment
+        self.logger.info(
+            f'Writing single nucleotide polymorphism alignment to: {self.prefix}.aln'
+        )
+        run_cmd(
+            f'snp-sites -c -o {self.prefix}.aln {self.prefix}.full.aln'
+        )
+
+        self.logger.info(
+            f'Writing single nucleotide polymorphism data to: {self.prefix}.vcf'
+        )
+        run_cmd(
+            f'snp-sites -c -v -o {self.prefix}.vcf {self.prefix}.full.aln'
+        )
+
+        snp_count = sum(
+            [1 for _ in VariantFile(f'{self.prefix}.vcf').fetch()]
+        )
+        self.logger.info(
+            f'Final single nucleotide polymorphisms in alignment: {snp_count}'
+        )
+
 
 
 class RandomForestFilter(PoreLogger):
@@ -437,7 +469,7 @@ class RandomForestFilter(PoreLogger):
             stats_ont = stats_ont
 
         self.logger.info(f"Reading files from reference (Snippy) and variant (ONT) callers")
-        ont_with_truth, snippies = self.get_data_from_comparisons(
+        ont_with_truth, snippies, _ = self.get_data_from_comparisons(
             comparisons=comparisons, caller=caller, break_complex=break_complex, outdir=self.evaluation_dir,
             prefix=prefix, stats=stats_ont  # none if from directory
         )
@@ -483,9 +515,10 @@ class RandomForestFilter(PoreLogger):
             application_truth_summaries.append(app_summary)
 
         classifier_truth_all = pd.DataFrame(classifier_truth_summaries)\
-            .set_index('name').sort_values(by=['name', 'coverage'])
+            .set_index('name').sort_values(by=['model', 'name'])
+
         application_truth_all = pd.DataFrame(application_truth_summaries)\
-            .set_index('name').sort_values(by=['name', 'coverage'])
+            .set_index('name').sort_values(by=['model', 'name'])
 
         print(classifier_truth_all)
         print(application_truth_all)
@@ -524,7 +557,7 @@ class RandomForestFilter(PoreLogger):
 
         comparisons = self.get_coverage_comparisons(dir_snippy=dir_snippy, dir_ont=dir_ont, snippy_ext=snippy_ext)
 
-        ont_with_truth, snippies = self.get_data_from_comparisons(
+        ont_with_truth, snippies, _ = self.get_data_from_comparisons(
             comparisons=comparisons, caller=caller, break_complex=break_complex, outdir=self.training_dir
         )
 
@@ -789,11 +822,10 @@ class RandomForestFilter(PoreLogger):
 
         truth_comparison = pd.DataFrame(truth_summaries).set_index('name').sort_values(by=['name', 'coverage'])
 
-        print(truth_comparison)
-
+        # Raw truth from SNP callers:
         truth_comparison.to_csv(outdir / f'{prefix}_{caller}_truth.tsv', sep='\t', index=True)
 
-        return ont_with_truth, snippies
+        return ont_with_truth, snippies, truth_comparison
 
     @staticmethod
     def read_samples_from_comparison(comparison: tuple, caller: str = "clair", break_complex: bool = True, stats: Path = None):
