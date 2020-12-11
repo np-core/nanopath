@@ -37,7 +37,7 @@ from pathlib import Path
     "--extract_head", "-eh", default="", help="Extract categorical data header names [nf_id,model]", type=str
 )
 @click.option(
-    "--clean", "-c", help="Subset model column if present to a single category and remove model column [nf_id,model]", is_flag=True
+    "--clean", "-c", help="Subset model column if present to the first (single) category and remove model column", is_flag=True
 )
 @click.option(
     "--fill", "-f", help="Fill missing values with this value [raw]", type=str, default=None
