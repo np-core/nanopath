@@ -17,14 +17,6 @@ from nanopath.beastling import BirthDeathSkylineSerial
     help="YAML configuration file including prior settings [None]"
 )
 @click.option(
-    "--yaml_dir", "-yd", required=False, type=Path, default=None,
-    help="YAML configuration file directory to process all YAML files from [None]"
-)
-@click.option(
-    "--yaml_glob", "-yg", required=False, type=str, default="*.yaml",
-    help="Glob on the directory to subset config files matching alignment and data input ['*.yaml']"
-)
-@click.option(
     "--clock", "-c", required=False, type=str, default='strict',
     help="Molecular clock model: strict, relaxed_exponential, relaxed_lognormal [strict]"
 )
@@ -45,6 +37,15 @@ from nanopath.beastling import BirthDeathSkylineSerial
     help="Use sampling proportion intervals from configuration YAML [false]"
 )
 @click.option(
+    "--dimensions", "-dm", type=str, default=None,
+    help="Use the same template configuration but produce multiple XML "
+         "with dimensional slices of Re over a range(format: 1..10) [none]"
+)
+@click.option(
+    "--sample_prior", "-s", is_flag=True,
+    help="Sample from prior [false]"
+)
+@click.option(
     "--prefix", "-p", required=False, type=str, default='bdss',
     help="Prefix for sample logs from BEAST [bdss]"
 )
@@ -52,15 +53,11 @@ from nanopath.beastling import BirthDeathSkylineSerial
     "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
     help="Outdir for XML files [$PWD/bdss]"
 )
-def xml_bdss(alignment, data, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, outdir, intervals, prefix):
+def xml_bdss(alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions):
 
     """ Pre-configured Birth-Death Skyline Serial XML """
 
-    if yaml_dir is not None:
-        yaml_files = {f.stem: f for f in yaml_dir.glob(f"{yaml_glob}")}
-    else:
-        yaml_files = {prefix: yaml}
-
+    yaml_files = {prefix: yaml}
     outdir.mkdir(parents=True, exist_ok=True)
 
     for prefix, y in yaml_files.items():
@@ -72,7 +69,8 @@ def xml_bdss(alignment, data, yaml, yaml_dir, yaml_glob, clock, mcmc, length, ho
             chain_type=mcmc,
             chain_length=length,
             chain_number=hot+1,
-            prefix=prefix
+            prefix=prefix,
+            sample_prior=sample_prior
         )
 
         bdss.print_configuration()
@@ -93,6 +91,15 @@ def xml_bdss(alignment, data, yaml, yaml_dir, yaml_glob, clock, mcmc, length, ho
             slice_config = config.get('priors').get('intervals')
             bdss.set_slices(slice_config=slice_config)
 
-        bdss.construct_template(
-            xml=outdir / f'{prefix}.xml'
-        )
+        if dimensions:
+            df, dt = dimensions.split("..")
+            drange = range(int(df), int(dt)+1)
+
+            for d in drange:
+                bdss.construct_template(
+                    xml=outdir / f'{prefix}_d{d}.xml', r_dimension=d
+                )
+        else:
+            bdss.construct_template(
+                xml=outdir / f'{prefix}.xml'
+            )

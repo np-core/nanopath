@@ -37,7 +37,8 @@ class Beastling(PoreLogger):
         chain_type: str = 'default',
         chain_number: int = 4,
         prefix: str = "bdss",
-        keep_missing: bool = True
+        keep_missing: bool = True,
+        sample_prior: bool = False
     ):
 
         """ Initiate Beastling
@@ -72,6 +73,11 @@ class Beastling(PoreLogger):
         self.clock_model = clock_model
         self.clock = None  # configured with priors later
 
+        if sample_prior:
+            self.sample_from_prior = "true"
+        else:
+            self.sample_from_prior = "false"
+
         # Demographic model
         self.model_priors = dict()  # configured in model subclasses
 
@@ -87,6 +93,8 @@ class Beastling(PoreLogger):
         self.tree_log = f"{prefix}.trees"
         self.tree_every = sample_every  # same as sample frequency
 
+        self.prefix = prefix
+
         # Housekeeping
         self.keep_missing = keep_missing  # keep samples with missing dates
 
@@ -96,7 +104,7 @@ class Beastling(PoreLogger):
 
         # Constraints
         self.allowed_distributions = (
-            'lognormal', 'exponential', 'beta', 'gamma'
+            'lognormal', 'exponential', 'beta', 'gamma', 'uniform'
         )
         self.allowed_gamma_modes = {
             'shape_mean': 'ShapeMean',
@@ -119,7 +127,8 @@ class Beastling(PoreLogger):
             'lognormal': ('mean', 'sd', 'real_space'),
             'exponential': ('mean',),
             'gamma': ('alpha', 'beta', 'mode'),
-            'beta': ('alpha', 'beta')
+            'beta': ('alpha', 'beta'),
+            'uniform': ()
         }
 
         self.allowed_model_priors = ()  # defined in subclasses
@@ -259,7 +268,7 @@ class Beastling(PoreLogger):
                 f'target="0.234" logHeatedChains="false" deltaTemperature="0.1" ' \
                 f'optimise="true" resampleEvery="{self.sample_every}" >'
         else:
-            return f'<run id="mcmc" spec="MCMC" chainLength="{self.chain_length}">'
+            return f'<run id="mcmc" spec="MCMC" chainLength="{self.chain_length}" sampleFromPrior="{self.sample_from_prior}">'
 
     def get_date_xml(self) -> str:
 
@@ -470,6 +479,11 @@ class Beastling(PoreLogger):
             prior.upper = config.get('upper')
             prior.dimension = config.get('dimension')
 
+            if 'fixed' in config.keys():
+                # Set the whole clock to a fixed value (no operators)
+                clock.fixed = config.get('fixed', False)
+                self.logger.info(f'Set a fixed clock at rate: {prior.initial}')
+
             prior.check_init()
 
         self.clock = clock
@@ -507,6 +521,8 @@ class Beastling(PoreLogger):
                     alpha=prior_data.get('alpha'),
                     beta=prior_data.get('beta'),
                 )
+            elif distribution == 'uniform':
+                distributions[prior] = Uniform()
             else:
                 raise BeastlingError(
                     f'Distribution {distribution} is not supported'
@@ -612,7 +628,8 @@ class BirthDeathSkylineSerial(Beastling):
         chain_type: str,
         chain_length: int,
         chain_number: int,
-        prefix: str
+        prefix: str,
+        sample_prior: bool
     ):
 
         Beastling.__init__(
@@ -623,7 +640,8 @@ class BirthDeathSkylineSerial(Beastling):
             chain_type=chain_type,
             chain_length=chain_length,
             chain_number=chain_number,
-            prefix=prefix
+            prefix=prefix,
+            sample_prior=sample_prior
         )
 
         self.allowed_model_priors = [
@@ -643,7 +661,7 @@ class BirthDeathSkylineSerial(Beastling):
             become_uninfectious=BecomeUninfectiousBDSS()
         )
 
-    def construct_template(self, xml: Path):
+    def construct_template(self, xml: Path, r_dimension: int = None):
 
         template = self.load_template(file='bdss.xml')
 
@@ -659,13 +677,13 @@ class BirthDeathSkylineSerial(Beastling):
             data_xml=self.get_data_xml(),
             date_xml=self.get_date_xml(),
             mcmc_xml=self.get_chain_xml(),
-            tree_log=self.tree_log,
+            tree_log=self.tree_log if r_dimension is None else f"{self.prefix}_d{r_dimension}.trees",
             tree_every=self.tree_every,
-            posterior_log=self.posterior_log,
+            posterior_log=self.posterior_log if r_dimension is None else f"{self.prefix}_d{r_dimension}.log",
             posterior_every=self.posterior_every,
             origin_param=og_prior.get_parameter_xml(),
             origin_prior=og_prior.get_prior_xml(),
-            reproductive_number_param=rn_prior.get_parameter_xml(),
+            reproductive_number_param=rn_prior.get_parameter_xml(d=r_dimension),
             reproductive_number_prior=rn_prior.get_prior_xml(),
             sampling_proportion_param=sp_prior.get_parameter_xml(),
             sampling_proportion_prior=sp_prior.get_prior_xml(),
@@ -849,7 +867,8 @@ class BirthDeathSkylineContemporary(Beastling):
         chain_type: str,
         chain_length: int,
         chain_number: int,
-        prefix: str
+        prefix: str,
+        sample_prior: bool
     ):
 
         Beastling.__init__(
@@ -860,7 +879,8 @@ class BirthDeathSkylineContemporary(Beastling):
             chain_type=chain_type,
             chain_length=chain_length,
             chain_number=chain_number,
-            prefix=prefix
+            prefix=prefix,
+            sample_prior=sample_prior
         )
 
         self.allowed_model_priors = [
@@ -1326,6 +1346,17 @@ class Exponential(Distribution):
         """
 
 
+class Uniform(Distribution):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_xml():
+        return f"""
+            <Uniform id="Uniform.{uuid.uuid4()}" name="distr"/>
+        """
+
+
 class LogNormal(Distribution):
     def __init__(
         self, mean: float = 1.0, sd: float = 1.25, real_space: bool = False
@@ -1548,7 +1579,7 @@ class Prior:
                     'intervals when setting intervals of sampling proportion'
                 )
 
-    def get_parameter_xml(self) -> str:
+    def get_parameter_xml(self, d: int = None) -> str:
 
         lower, upper = self.get_bounds()
 
@@ -1560,7 +1591,7 @@ class Prior:
 
         return textwrap.dedent(
             f'<parameter id="{self.x}:snp" spec="{self.param_spec}" '
-            f'dimension="{self.dimension}" {lower} {upper} '
+            f'dimension="{d if d else self.dimension}" {lower} {upper} '
             f'name="stateNode">{initial}</parameter>'
         )
 
@@ -1828,6 +1859,7 @@ class Clock:
             self, priors: [Prior]
     ):
         self.priors = priors
+        self.fixed: bool or None = None
         self.state_node: str = ''  # defined in some clock subclasses
         self.branch_rate_model: str = self.get_branch_rate_xml()
         self.updown_operator: str = self.get_updown_operator_xml()
@@ -1869,15 +1901,21 @@ class Strict(Clock):
         return f'<branchRateModel id="StrictClock.c:snp" spec="beast.evolution.branchratemodel.StrictClockModel" clock.rate="@clockRate.c:snp"/>'
 
     def get_scale_operator_xml(self):
-        return f'<operator id="StrictClockRateScaler.c:snp" spec="ScaleOperator" parameter="@clockRate.c:snp" scaleFactor="0.5" weight="3.0"/>'
+        if self.fixed:
+            return ""
+        else:
+            return f'<operator id="StrictClockRateScaler.c:snp" spec="ScaleOperator" parameter="@clockRate.c:snp" scaleFactor="0.5" weight="3.0"/>'
 
     def get_updown_operator_xml(self):
-        return textwrap.dedent(f"""
-            <operator id="strictClockUpDownOperator.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
-                <up idref="clockRate.c:snp"/>
-                <down idref="Tree.t:snp"/>
-            </operator>
-        """)
+        if self.fixed:
+            return ""
+        else:
+            return textwrap.dedent(f"""
+                <operator id="strictClockUpDownOperator.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
+                    <up idref="clockRate.c:snp"/>
+                    <down idref="Tree.t:snp"/>
+                </operator>
+            """)
 
 
 class RelaxedExponential(Clock):
@@ -1895,20 +1933,26 @@ class RelaxedExponential(Clock):
         """)
 
     def get_scale_operator_xml(self):
-        return textwrap.dedent(f""" 
-            <operator id="ucedMeanScaler.c:snp" spec="ScaleOperator" parameter="@ucedMean.c:snp" scaleFactor="0.5" weight="1.0"/>
-            <operator id="ExpCategoriesRandomWalk.c:snp" spec="IntRandomWalkOperator" parameter="@expRateCategories.c:snp" weight="10.0" windowSize="1"/>
-            <operator id="ExpCategoriesSwapOperator.c:snp" spec="SwapOperator" intparameter="@expRateCategories.c:snp" weight="10.0"/>
-            <operator id="ExpCategoriesUniform.c:snp" spec="UniformOperator" parameter="@expRateCategories.c:snp" weight="10.0"/>
-        """)
+        if self.fixed:
+            return ''
+        else:
+            return textwrap.dedent(f""" 
+                <operator id="ucedMeanScaler.c:snp" spec="ScaleOperator" parameter="@ucedMean.c:snp" scaleFactor="0.5" weight="1.0"/>
+                <operator id="ExpCategoriesRandomWalk.c:snp" spec="IntRandomWalkOperator" parameter="@expRateCategories.c:snp" weight="10.0" windowSize="1"/>
+                <operator id="ExpCategoriesSwapOperator.c:snp" spec="SwapOperator" intparameter="@expRateCategories.c:snp" weight="10.0"/>
+                <operator id="ExpCategoriesUniform.c:snp" spec="UniformOperator" parameter="@expRateCategories.c:snp" weight="10.0"/>
+            """)
 
     def get_updown_operator_xml(self):
-        return textwrap.dedent(f"""
-            <operator id="relaxedUpDownOperatorExp.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
-                <up idref="ucedMean.c:snp"/>
-                <down idref="Tree.t:snp"/>
-            </operator>
-        """)
+        if self.fixed:
+            return ''
+        else:
+            return textwrap.dedent(f"""
+                <operator id="relaxedUpDownOperatorExp.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
+                    <up idref="ucedMean.c:snp"/>
+                    <down idref="Tree.t:snp"/>
+                </operator>
+            """)
 
 
 class RelaxedLogNormal(Clock):
@@ -1926,18 +1970,24 @@ class RelaxedLogNormal(Clock):
         """)
 
     def get_scale_operator_xml(self):
-        return textwrap.dedent(f""" 
-            <operator id="ucldMeanScaler.c:snp" spec="ScaleOperator" parameter="@ucldMean.c:snp" scaleFactor="0.5" weight="1.0"/>
-            <operator id="ucldStdevScaler.c:snp" spec="ScaleOperator" parameter="@ucldStdev.c:snp" scaleFactor="0.5" weight="3.0"/>
-            <operator id="CategoriesRandomWalk.c:snp" spec="IntRandomWalkOperator" parameter="@rateCategories.c:snp" weight="10.0" windowSize="1"/>
-            <operator id="CategoriesSwapOperator.c:snp" spec="SwapOperator" intparameter="@rateCategories.c:snp" weight="10.0"/>
-            <operator id="CategoriesUniform.c:snp" spec="UniformOperator" parameter="@rateCategories.c:snp" weight="10.0"/>
-        """)
+        if self.fixed:
+            return ""
+        else:
+            return textwrap.dedent(f""" 
+                <operator id="ucldMeanScaler.c:snp" spec="ScaleOperator" parameter="@ucldMean.c:snp" scaleFactor="0.5" weight="1.0"/>
+                <operator id="ucldStdevScaler.c:snp" spec="ScaleOperator" parameter="@ucldStdev.c:snp" scaleFactor="0.5" weight="3.0"/>
+                <operator id="CategoriesRandomWalk.c:snp" spec="IntRandomWalkOperator" parameter="@rateCategories.c:snp" weight="10.0" windowSize="1"/>
+                <operator id="CategoriesSwapOperator.c:snp" spec="SwapOperator" intparameter="@rateCategories.c:snp" weight="10.0"/>
+                <operator id="CategoriesUniform.c:snp" spec="UniformOperator" parameter="@rateCategories.c:snp" weight="10.0"/>
+            """)
 
     def get_updown_operator_xml(self):
-        return textwrap.dedent(f"""
-            <operator id="relaxedUpDownOperator.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
-                <up idref="ucldMean.c:snp"/>
-                <down idref="Tree.t:snp"/>
-            </operator>
-        """)
+        if self.fixed:
+            return ""
+        else:
+            return textwrap.dedent(f"""
+                <operator id="relaxedUpDownOperator.c:snp" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
+                    <up idref="ucldMean.c:snp"/>
+                    <down idref="Tree.t:snp"/>
+                </operator>
+            """)

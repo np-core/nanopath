@@ -18,12 +18,15 @@ from nanopath.pathfinder import subset_alignment
     "--outdir", "-o", default="aln_subsets", help="Output path for subset alignments", type=Path,
 )
 @click.option(
-    "--meta", "-m", default=None, help="Provide a meta data file to subset too", type=Path,
+    "--meta", "-m", default=None, help="Provide a meta data file to apply subset to as well", type=Path,
 )
-def subset_aln(alignment, outdir, data, column, meta):
+@click.option(
+    "--prefix", "-p", default="", help="Prefix for outputs", type=str,
+)
+def subset_aln(alignment, outdir, data, column, meta, prefix):
 
-    """ Remove 'Reference' from Snippy alignment output file """
+    """ Subset an alignment by values in a data table column """
 
-    subset_alignment(alignment=alignment, outdir=outdir, data=data, column=column, meta=meta)
+    subset_alignment(alignment=alignment, outdir=outdir, data=data, column=column, meta=meta, prefix=prefix)
 
 

@@ -46,6 +46,10 @@ from nanopath.beastling import BirthDeathSkylineContemporary
     help="Use sampling proportion intervals from configuration YAML [false]"
 )
 @click.option(
+    "--sample_prior", "-s", is_flag=True,
+    help="Sample from prior [false]"
+)
+@click.option(
     "--prefix", "-p", required=False, type=str, default='bdss',
     help="Prefix for sample logs from BEAST [bdss]"
 )
@@ -53,7 +57,7 @@ from nanopath.beastling import BirthDeathSkylineContemporary
     "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
     help="Outdir for XML files [$PWD/bdss]"
 )
-def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, intervals, prefix):
+def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, intervals, prefix, sample_prior):
 
     """ Pre-configured Birth-Death Skyline Contemporary XML """
 
@@ -73,7 +77,8 @@ def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, le
             chain_type=mcmc,
             chain_length=length,
             chain_number=hot+1,
-            prefix=prefix
+            prefix=prefix,
+            sample_prior=sample_prior
         )
 
         bdsc.print_configuration()

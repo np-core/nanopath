@@ -145,7 +145,7 @@ def print_fastx_header(fastx: Path):
             print(entry.name)
 
 
-def subset_alignment(alignment: Path, data: Path, outdir: Path, column: str, meta: Path = None) -> None:
+def subset_alignment(alignment: Path, data: Path, outdir: Path, column: str, meta: Path = None, prefix: str = "") -> None:
 
     """
     :param alignment: alignment file fasta
@@ -173,11 +173,11 @@ def subset_alignment(alignment: Path, data: Path, outdir: Path, column: str, met
 
         if meta_data is not None:
             meta_data[meta_data.name.isin(names)].to_csv(
-                outdir / f"{col}.tsv", sep='\t', index=False
+                outdir / f"{prefix}{col}.tsv", sep='\t', index=False
             )
 
         with pysam.FastxFile(alignment) as fin,\
-                (outdir / f"{col}.fasta").open('w') as fout:
+                (outdir / f"{prefix}{col}.fasta").open('w') as fout:
             for entry in fin:
                 if entry.name in names:
                     fout.write(str(entry) + '\n')

@@ -713,7 +713,10 @@ class ForestSample(Sample):
             position = int(rec.pos)
             reference = rec.ref
             variants = rec.alts  # tuple
-            qual = float(rec.qual)
+            try:
+                qual = float(rec.qual)
+            except TypeError:  # None "."
+                qual = 0  # TODO: should this be 0 or None equivalent
 
             # Snippy output VCFs only have variant sites: GT = 1/1
             try:
@@ -853,7 +856,11 @@ class SnippySample(Sample):
             position = int(rec.pos)
             reference = rec.ref
             variants = rec.alts  # tuple
-            qual = float(rec.qual)
+
+            try:
+                qual = float(rec.qual)
+            except TypeError:  # None "."
+                qual = 0
 
             info = rec.info
             if 'snp' in info['TYPE'] \
@@ -889,10 +896,13 @@ class SnippySample(Sample):
                 ))
 
                 var += 1
-
-        self.data = pandas.DataFrame(calls).sort_values(
-            ['chromosome', 'position']
-        )
+        try:
+            self.data = pandas.DataFrame(calls).sort_values(
+                ['chromosome', 'position']
+            )
+        except KeyError:
+            self.logger.info(f"VCF: {self.vcf} did not contain variants")
+            raise
 
     def get_excluded_positions(self):
 
@@ -934,7 +944,11 @@ class ClairSample(Sample):
             position = int(rec.pos)
             reference = rec.ref
             variants = rec.alts  # tuple
-            qual = float(rec.qual)
+
+            try:
+                qual = float(rec.qual)
+            except TypeError:  # None "."
+                qual = 0
 
             # Clair haploid mode variants
             try:
@@ -1004,7 +1018,10 @@ class MedakaSample(Sample):
             position = int(rec.pos)
             reference = rec.ref
             variants = rec.alts  # tuple
-            qual = float(rec.qual)
+            try:
+                qual = float(rec.qual)
+            except TypeError:  # None "."
+                qual = 0
 
             # Medaka output VCFs only have variant sites: GT = 1/1
             try:

@@ -41,11 +41,11 @@ from nanopath.variants import HybridCoreGenome
     default="core",
     help='Prefix for output alignment and VCF'
 )
-def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix):
+def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov):
 
     cg = HybridCoreGenome(prefix=prefix, reference=reference)
 
     cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=False)  # only consider snps
-    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=5)  # min_cov -1 do not assess low cov / gaps in ONT
+    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=min_cov)
 
     cg.call_hybrid_core()

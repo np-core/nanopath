@@ -5,16 +5,19 @@ from pathlib import Path
 
 @click.command()
 @click.option(
-    "--dir", "-d", default=".", help="Input directory containing dataframes for globbing", type=Path,
+    "--df", "-df", default=None, help="Input dataframes for combining", type=str,
 )
 @click.option(
-    "--glob", "-g", default="*.csv", help="Input glob to collect data frames [*.csv]", type=str,
+    "--dir", "-d", default=None, help="Input directory containing dataframes for globbing", type=Path,
+)
+@click.option(
+    "--glob", "-g", default=None, help="Input glob to collect data frames [*.csv]", type=str,
 )
 @click.option(
     "--output", "-o", default="combined.tsv", help="Output data frame [combined.tsv]", type=Path,
 )
 @click.option(
-    "--axis", "-a", default=0, help="Axis to comine: 0 columns (join new rows), 1 rows (join new columns) [0]", type=int,
+    "--axis", "-a", default=0, help="Axis to combine: 0 columns (join new rows), 1 rows (join new columns) [0]", type=int,
 )
 @click.option(
     "--sep_in", "-si", default="\t", help="Input delimiter [\\t]", type=str,
@@ -36,12 +39,20 @@ from pathlib import Path
 @click.option(
     "--clean", "-c", help="Subset model column if present to a single category and remove model column [nf_id,model]", is_flag=True
 )
-def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split, extract_head, clean):
+@click.option(
+    "--fill", "-f", help="Fill missing values with this value [raw]", type=str, default=None
+)
+def combine_df(df, dir, glob, output, sep_in, sep_out, axis, extract, extract_split, extract_head, clean, fill):
 
     """ Concatenate data frames with the same columns FASTA headers """
 
+    if df is None:
+        files = dir.glob(glob)
+    else:
+        files = df.split(',')
+
     dfs = []
-    for f in dir.glob(glob):
+    for f in files:
         df = pandas.read_csv(f, sep=sep_in)
 
         # Extract for Nextflow
@@ -68,4 +79,7 @@ def combine_df(dir, glob, output, sep_in, sep_out, axis, extract, extract_split,
         dfout = dfout[dfout['model'] == extract_model]
         dfout = dfout.drop(columns="model")
 
-    dfout.to_csv(f"{output}", sep=sep_out)
+    if fill is not None:
+        dfout = dfout.fillna(fill)
+
+    dfout.to_csv(f"{output}", sep=sep_out, index=False)
