@@ -515,10 +515,10 @@ class RandomForestFilter(PoreLogger):
             application_truth_summaries.append(app_summary)
 
         classifier_truth_all = pd.DataFrame(classifier_truth_summaries)\
-            .set_index('name').sort_values(by=['model', 'name'])
+            .set_index('name').sort_values(by=['name'])
 
         application_truth_all = pd.DataFrame(application_truth_summaries)\
-            .set_index('name').sort_values(by=['model', 'name'])
+            .set_index('name').sort_values(by=['name'])
 
         print(classifier_truth_all)
         print(application_truth_all)
