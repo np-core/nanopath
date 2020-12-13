@@ -920,11 +920,22 @@ class RandomForestFilter(PoreLogger):
         if true_negatives is None:
             true_negatives = 0
 
-        accuracy = (true_positives + true_negatives) / \
-                   (true_positives + true_negatives + false_positives + false_negatives)
+        try:
+            accuracy = (true_positives + true_negatives) / \
+                       (true_positives + true_negatives + false_positives + false_negatives)
+        except ZeroDivisionError:
+            self.logger.error("ZeroDivsion on truth accuracy.")
+            raise
 
-        precision = true_positives / (true_positives + false_positives)
-        recall = true_positives / (true_positives + false_negatives)
+        try:
+            precision = true_positives / (true_positives + false_positives)
+        except ZeroDivisionError:
+            precision = 0
+
+        try:
+            recall = true_positives / (true_positives + false_negatives)
+        except ZeroDivisionError:
+            recall = 0
 
         f1 = 2 * (recall * precision) / (recall + precision)
 

@@ -17,7 +17,7 @@ from pathlib import Path
     "--output", "-o", default="combined.tsv", help="Output data frame [combined.tsv]", type=Path,
 )
 @click.option(
-    "--axis", "-a", default=0, help="Axis to combine: 0 columns (join new rows), 1 rows (join new columns) [0]", type=int,
+    "--axis", "-a", default=0, help="Axis to combine: 0 (join new rows), 1 (join new columns) [0]", type=int,
 )
 @click.option(
     "--sep_in", "-si", default="\t", help="Input delimiter [\\t]", type=str,

@@ -8,7 +8,9 @@ from .compose import compose
 from .combine_df import combine_df
 from .sort_df import sort_df
 from .merge_df import merge_df
-from .plot_variant_summary import plot_variant_summary
+from .plot_variant_violins import plot_variant_violins
+from .plot_mlst_heatmap import plot_mlst_heatmap
+
 
 VERSION = "1"
 
@@ -27,5 +29,6 @@ utils.add_command(combine_df)
 utils.add_command(sort_df)
 utils.add_command(merge_df)
 utils.add_command(get_nctc)
-utils.add_command(plot_variant_summary)
+utils.add_command(plot_variant_violins)
+utils.add_command(plot_mlst_heatmap)
 utils.add_command(snippy_core_to_clair)

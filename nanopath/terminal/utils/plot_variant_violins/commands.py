@@ -21,13 +21,13 @@ from numpy import log10, linspace, inf, nan
     "--binary", "-b", type=str, default="ST93", help="Get one value and plot a binary violin by categorical data vs others from column [ST93]"
 )
 @click.option(
-    "--panels", "-p", type=str, default="model", help="Column in data to use as paneling for rows, none for a single category / row panel [model]"
+    "--panels", "-p", type=str, default="model", help="Column in data to use as panelling for rows, none for a single category / row panel [model]"
 )
 @click.option(
     "--plots", "-pl", type=str, default="reference", help="Column in data to use as individual output plots across --column, column panel [reference]"
 )
 @click.option(
-    "--variables", "-v", type=str, default="default", help="One or multiple y-axis variables to plot [apr=accuracy,precision,recall]"
+    "--variables", "-v", type=str, default="default", help="One or multiple y-axis variables to plot [default=accuracy,precision,recall]"
 )
 @click.option(
     "--sep", "-si", default="\t", help="Input delimiter [\\t]", type=str,
@@ -59,7 +59,7 @@ from numpy import log10, linspace, inf, nan
 @click.option(
     "--order", "-or", default=None, help="Order of row panels by panel names in --panels", type=str,
 )
-def plot_variant_summary(
+def plot_variant_violins(
         data, output, column, binary, sep, variables, palettes, plots,
         title_ref, locs, min_column, min_value, legend_size, panels, exclude, include, order
 ):
@@ -81,17 +81,21 @@ def plot_variant_summary(
     else:
         raise ValueError
 
-    data_frame = pandas.read_csv(data, sep=sep, header=0)
+    title_ref = title_ref.split(",")
+
+    raw_data = pandas.read_csv(data, sep=sep, header=0)
 
     if plots:
-        plot_variations = data_frame[plots].unique().tolist()
+        plot_variations = raw_data[plots].unique().tolist()
     else:
         plot_variations = [""]
 
-    for variation in plot_variations:
+    for tri, variation in enumerate(plot_variations):
 
         if variation:
-            data_frame = data_frame[data_frame[plots] == variation]
+            data_frame = raw_data[raw_data[plots] == variation]
+        else:
+            data_frame = raw_data.copy()
 
         if exclude:
             print("Exclude: ", exclude)
@@ -105,9 +109,10 @@ def plot_variant_summary(
 
         if panels:
             if order is None:
-                panel_rows = sorted(list(
-                    set(data_frame[panels].unique().tolist())
-                ))
+                panel_rows = sorted(
+                    data_frame[panels].unique().tolist()
+                )
+                print(panel_rows)
             else:
                 panel_rows = order.split(",")
         else:
@@ -143,6 +148,8 @@ def plot_variant_summary(
                 #
                 # print(model, var)
                 # print(df[column].value_counts())
+
+                print(model, var, df)
 
                 if min_column:
                     df = df[df[min_column] > min_value]
@@ -211,7 +218,7 @@ def plot_variant_summary(
                     labels[0:len(var)],
                     title="", loc=new_attr["locs"][t], prop={'size': legend_size}
                 )
-                ax.set_title(f'\n{title_ref} reference: {panel_rows[r]}')
+                ax.set_title(f'\n{title_ref[tri]} variant calls: {panel_rows[r]}')
 
                 if varis_order[c] != "apr":
                     ax.yaxis.set_major_formatter(mticker.StrMethodFormatter("$10^{{{x:.0f}}}$"))
@@ -225,7 +232,7 @@ def plot_variant_summary(
 
         summary = pandas.concat(summaries).sort_values(['model', 'group'])
 
-        print(summary)
+
         if variation:
             name = f"{output}_{variation}"
         else:
@@ -264,6 +271,6 @@ def print_model_summary(df: pandas.DataFrame, column: str, model: str):
             }
             summary_df.append(row)
 
-    summary = pandas.DataFrame(summary_df).sort_values(['model', 'group'])
+    summary = pandas.DataFrame(summary_df)
 
-    return summary
+    return summary.sort_values(['model', 'group'])
