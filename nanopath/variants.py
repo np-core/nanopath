@@ -770,9 +770,11 @@ class RandomForestFilter(PoreLogger):
             name: len(coverages) for name, coverages in ont_coverage.items()
         }
         if len(set(coverage_lengths.values())) != 1:
-            raise ValueError(
+            self.logger.info(
                 f'Could not detect matching coverage for each file: {coverage_lengths}'
             )
+            # Allow for failing coverages (e.g. Medaka v1.2.1 haploid calling workflow on low coverage subsets)
+            pass
 
         snippy_ref_names = set(
             [f.stem.replace(".ref", "").split("_")[0] for f in snippy_files]
