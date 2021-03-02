@@ -939,7 +939,10 @@ class RandomForestFilter(PoreLogger):
         except ZeroDivisionError:
             recall = 0
 
-        f1 = 2 * (recall * precision) / (recall + precision)
+        try:
+            f1 = 2 * (recall * precision) / (recall + precision)
+        except ZeroDivisionError:
+            f1 = 0
 
         try:
             _, cov = name.strip(".vcf").split("_")

@@ -88,9 +88,6 @@ def hybrid_megalodon(
 
     """ Merge variants detected by Megalodon with variants from Snippy """
 
-    # TODO - check if there is discrepancy between Snippy VCF and Alignments
-    # TODO - if so, use the VCF to generate the merged output alignments
-
     outdir.mkdir(parents=True, exist_ok=True)
 
     sc = MegalodonCore(core_vcf=vcf_snippy)

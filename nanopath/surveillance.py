@@ -162,7 +162,7 @@ class Survey:
 
         self.url_result = "read_run"
         self.url_display = "report"
-        self.url_query = "https://www.ebi.ac.uk/ena/data/warehouse/search?query="
+        self.url_query = "https://www.ebi.ac.uk/ena/data/portal/api/search?query="
 
         self.url_fields = "run_accession,tax_id,fastq_ftp,fastq_bytes," \
                           "read_count,base_count," \
@@ -499,18 +499,25 @@ class BioSampler:
 
     def __init__(self):
 
-        self.url = "https://www.ebi.ac.uk/biosamples/samples/"
+        self.url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
+                   "&fields=sample_accession,location,country,collection_date,scientific_name&query="
 
     def process_list(self, file: Path, query_column: str, sep: str, outfile: Path):
 
         df = self.read(file, sep=sep)
+        data_queries = [f"run_accession={run_accession}" for run_accession in df[query_column]]
 
-        data = {
-            id_term: self.query(query=id_term) for id_term in df[query_column]
-        }
+        data_query_chunks = self.chunks(data_queries, 200)  # < max length of query string!
 
-        with outfile.open('w') as out:
-            json.dump(data, out)
+        for query_chunks in data_query_chunks:
+            query_string = " OR ".join(query_chunks)
+            self.query_url(query=query_string)
+
+    @staticmethod
+    def chunks(lst, n):
+        """Yield successive n-sized chunks from lst."""
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
 
     @staticmethod
     def read(file: Path, sep="\t") -> pandas.DataFrame:
@@ -520,7 +527,7 @@ class BioSampler:
         return pandas.read_csv(file, sep=sep, header=0)
 
     @RateLimiter(max_calls=3, period=1)
-    def query(self, query: str):
+    def query_json(self, query: str):
 
         print(f'Query: {query}')
         try:
@@ -538,14 +545,10 @@ class BioSampler:
             return response.json()
 
     @RateLimiter(max_calls=3, period=1)
-    def query_ena_rest(self, query: str = "GCA_000316565.2&display=text"):
-
-        self.url = "http://www.ebi.ac.uk/ena/data/search?query="
+    def query_url(self, query: str = ""):
 
         try:
-            response = requests.get(
-                self.url + f"{query}" + f"&display=text&"
-            )
+            response = requests.get(self.url + f"{query}")
             response.raise_for_status()
         except requests.exceptions.HTTPError as http_err:
             print(f'HTTP error occurred: {http_err}')  # Python 3.6
