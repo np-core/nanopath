@@ -4,8 +4,8 @@ import shlex
 import subprocess
 import urllib.request
 import requests
-import json
 
+from io import StringIO
 from ratelimiter import RateLimiter
 
 from tqdm import tqdm
@@ -492,7 +492,6 @@ class Survey:
                 f'run_accession="{s}"' for s in sample
             ) + "&domain=read"
 
-from io import StringIO
 
 class BioSampler:
 
@@ -503,20 +502,25 @@ class BioSampler:
         self.url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
                    "&fields=sample_accession,location,country,collection_date,scientific_name&query="
 
-    def process_list(self, file: Path, query_column: str, sep: str, outfile: Path):
+    def process_list(self, file: Path, query_column: str, sep: str, output: Path):
 
         df = self.read(file, sep=sep)
         data_queries = [f"run_accession={run_accession}" for run_accession in df[query_column]]
 
         data_query_chunks = self.chunks(data_queries, 200)  # < max length of query string!
 
+        query_data = []
         for query_chunks in data_query_chunks:
             query_string = " OR ".join(query_chunks)
             response_text = self.query_url(query=query_string)
-            df = pandas.read_csv(StringIO(response_text), sep='\t', header=0)
-
+            df = pandas.read_csv(
+                StringIO(response_text), sep='\t', header=0
+            )
             print(df)
+            query_data.append(df)
 
+        df = pandas.concat(query_data)
+        df.to_csv(output, sep="\t", header=True, index=False)
 
     @staticmethod
     def chunks(lst, n):
