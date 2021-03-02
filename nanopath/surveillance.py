@@ -492,6 +492,7 @@ class Survey:
                 f'run_accession="{s}"' for s in sample
             ) + "&domain=read"
 
+from io import StringIO
 
 class BioSampler:
 
@@ -511,7 +512,11 @@ class BioSampler:
 
         for query_chunks in data_query_chunks:
             query_string = " OR ".join(query_chunks)
-            self.query_url(query=query_string)
+            response_text = self.query_url(query=query_string)
+            df = pandas.read_csv(StringIO(response_text), sep='\t', header=0)
+
+            print(df)
+
 
     @staticmethod
     def chunks(lst, n):
@@ -557,4 +562,4 @@ class BioSampler:
         else:
             print('Success!')
 
-            print(response.content)
+        return response.text
