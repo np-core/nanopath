@@ -10,16 +10,16 @@ from nanopath.surveillance import BioSampler
     help='Data table to extract accessions from'
 )
 @click.option(
-    '--outfile', '-o', type=Path, required=False, default="[queries.json]",
-    help='Output response from queries by query key JSON format [queries.json]'
+    '--output', '-o', type=Path, required=False, default="run_query.tsv",
+    help='Output response from run queries [run_query.tsv]'
 )
 @click.option(
     '--query_column',  type=str, required=False, default="sample",
     help='Column in data containing accessions to query'
 )
-def query(file, outfile, query_column):
+def query(file, output, query_column):
 
-    """ Query and process metadata from the BioSample DB """
+    """ Query metadata by run accession from the BioSample DB """
 
     bs = BioSampler()
 
@@ -27,6 +27,6 @@ def query(file, outfile, query_column):
         file=file,
         sep='\t',
         query_column=query_column,
-        outfile=outfile
+        output=output
     )
 
