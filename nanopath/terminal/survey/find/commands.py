@@ -7,7 +7,7 @@ from nanopath.surveillance import Survey
 
 @click.command()
 @click.option(
-    '--data', '-d', type=Path, default=None, required=True,
+    '--data', '-d', type=Path, default=None, required=False,
     help='Path to input data file tab-delineated with column headers [none]'
 )
 @click.option(
@@ -45,12 +45,12 @@ def find(data, accession, project, species, outdir, tech, sub, term):
     outdir.mkdir(exist_ok=True, parents=True)
 
     su = Survey()
-    su.read_query_file(file=data)
 
-    if accession in su.query.columns:
-        sample_list = su.query[accession].tolist()
-    else:
-        sample_list = None
+    sample_list = None
+    if data is not None:
+        su.read_query_file(file=data)
+        if accession in su.query.columns:
+            sample_list = su.query[accession].tolist()
 
     query_results = su.query_ena(
         study=project,
