@@ -22,7 +22,7 @@ from pathlib import Path
 )
 @click.option(
     '--filter', '-fi', type=str, default=None,
-    help='Custom query filter on the return fields of the ENA query '
+    help='Pandas filter string on the return fields of the ENA query '
          'for example: "coverage < 700 & coverage > 50" '
 )
 @click.option(
@@ -37,15 +37,7 @@ from pathlib import Path
     '--sub', '-s', is_flag=True,
     help='Submitted files instead of fastq from ENA [false]'
 )
-def download(
-    outdir,
-    batch,
-    file,
-    filter,
-    ftp,
-    raw,
-    sub
-):
+def download(outdir, batch, file, filter, ftp, raw, sub):
     """ Download sequence read data from ENA """
 
     survey = Survey(outdir=outdir)
@@ -65,9 +57,7 @@ def download(
 
         if batch > 0:
             batches = survey.batch(query_result=survey.query, batch_size=batch)
-            batches = survey.batch_output(
-                batches, outdir=outdir
-            )
+            batches = survey.batch_output(batches, outdir=outdir)
         else:
             batches = [(
                 outdir, survey.query
