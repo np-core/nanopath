@@ -292,9 +292,9 @@ class Survey:
         for i, t in enumerate(terms):
             print(f'Submitting query: {i}')
             url = self.url + t
+            print(url)
             df = self._query(url)
 
-            print(url)
             query_results = self._sanitize_ena_query(
                 df, url, submitted_fastq=submitted_fastq,
                 allow_merged_fastq=allow_merged_fastq,
