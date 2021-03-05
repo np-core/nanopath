@@ -43,7 +43,8 @@ def download(outdir, batch, file, filter, ftp, raw, sub):
     survey = Survey(outdir=outdir)
     survey.read_query_file(file=file)
 
-    print(f"Total download size: {sum(survey.query.size) / 1024:.2f} GB [n = {len(survey.query)}]")
+    if not survey.query.empty:
+        print(f"Total download size: {sum(survey.query.size) / 1024:.2f} GB [n = {len(survey.query)}]")
 
     if raw:
         ascp = MiniAspera()
