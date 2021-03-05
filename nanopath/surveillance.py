@@ -160,15 +160,15 @@ class Survey:
 
         self.outdir = outdir
 
-        self.url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
-                   "&fields={self.fields}&query="
-
         self.fields = "study_accession,sample_accession,run_accession,tax_id,scientific_name," \
             "fastq_ftp,fastq_bytes,submitted_ftp,submitted_bytes," \
             "read_count,base_count," \
             "instrument_platform,instrument_model," \
             "library_layout,library_source,library_strategy," \
             "location,country,collection_date"
+
+        self.url = f"https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
+                   f"&fields={self.fields}&query="
 
         self.term_chunk_size = 200  # REST API limited by 6000 characters
 
