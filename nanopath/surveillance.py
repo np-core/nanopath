@@ -160,15 +160,15 @@ class Survey:
 
         self.outdir = outdir
 
-        self.url_result = "read_run"
-        self.url_query = "https://www.ebi.ac.uk/ena/data/portal/api/search?query="
+        self.url = "https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
+                   "&fields={self.fields}&query="
 
-        self.url_fields = "run_accession,tax_id,fastq_ftp,fastq_bytes," \
-                          "read_count,base_count," \
-                          "instrument_platform,instrument_model," \
-                          "library_layout,library_source," \
-                          "library_strategy,sample_accession,study_accession," \
-                          "submitted_ftp,submitted_bytes"
+        self.fields = "study_accession,sample_accession,run_accession,tax_id,scientific_name," \
+            "fastq_ftp,fastq_bytes,submitted_ftp,submitted_bytes," \
+            "read_count,base_count," \
+            "instrument_platform,instrument_model," \
+            "library_layout,library_source,library_strategy," \
+            "location,country,collection_date"
 
         self.term_chunk_size = 200  # REST API limited by 6000 characters
 
@@ -286,18 +286,12 @@ class Survey:
             sample_chunks = self.chunks(sample, self.term_chunk_size)
             terms = [self._construct_sample_query(sc) for sc in sample_chunks]
         else:
-            raise ValueError(
-                "Need to specify either species, study accession, "
-                "or custom search term for Survey.")
+            raise ValueError("Need to specify either species, study accession, or custom search term for Survey.")
 
         queries = {}
         for i, t in enumerate(terms):
             print(f'Submitting query: {i}')
-            url = f"{self.url_query}{t}&result={self.url_result}" \
-                  f"&fields={self.url_fields}&"
-
-            print(url)
-
+            url = self.url + t
             df = self._query(url)
 
             query_results = self._sanitize_ena_query(
@@ -430,7 +424,10 @@ class Survey:
                 "strategy": entry["library_strategy"],
                 "tax_id": entry["tax_id"],
                 "sample": entry["sample_accession"],
-                "study": entry["study_accession"]
+                "location": entry["location"],
+                "country": entry["country"],
+                "collection_date": entry["collection_date"],
+                "scientific_name": entry['scientific_name']
             }
 
             sanitized_dict[
@@ -489,8 +486,8 @@ class Survey:
             return f'"run_accession={sample}"'
         else:
             return " OR ".join(
-                f'run_accession="{s}"' for s in sample
-            ) + "&domain=read"
+                f'run_accession={s}' for s in sample
+            )
 
 
 class BioSampler:
