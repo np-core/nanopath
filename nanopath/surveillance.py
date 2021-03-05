@@ -161,7 +161,6 @@ class Survey:
         self.outdir = outdir
 
         self.url_result = "read_run"
-        self.url_display = "report"
         self.url_query = "https://www.ebi.ac.uk/ena/data/portal/api/search?query="
 
         self.url_fields = "run_accession,tax_id,fastq_ftp,fastq_bytes," \
@@ -295,8 +294,9 @@ class Survey:
         for i, t in enumerate(terms):
             print(f'Submitting query: {i}')
             url = f"{self.url_query}{t}&result={self.url_result}" \
-                  f"&fields={self.url_fields}&" \
-                  f"display={self.url_display}".replace(" ", "%20")
+                  f"&fields={self.url_fields}&"
+
+            print(url)
 
             df = self._query(url)
 
