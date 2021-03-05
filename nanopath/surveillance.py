@@ -294,6 +294,7 @@ class Survey:
             url = self.url + t
             df = self._query(url)
 
+            print(url)
             query_results = self._sanitize_ena_query(
                 df, url, submitted_fastq=submitted_fastq,
                 allow_merged_fastq=allow_merged_fastq,
