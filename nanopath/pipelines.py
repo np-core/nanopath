@@ -1223,137 +1223,76 @@ class AssemblyPipeline(PoreLogger):
 
     def plot_genotype_heatmap(
         self,
-        genotype: pandas.DataFrame,
         reference: pandas.DataFrame,
-        genotype2: pandas.DataFrame = None,
+        genotypes: {str: pandas.DataFrame},
         common_isolates: bool = True,
         exclude: list = None
     ):
         """ Plot lower and upper diagonal of genotype heatmaps """
 
-        # Drop plasmid replicon comparison, it's very unreliable in SCCion
-        if 'plasmid' in genotype.columns:
-            genotype.drop(columns='plasmid', inplace=True)
-        if 'plasmid' in reference.columns:
-            reference.drop(columns='plasmid', inplace=True)
+        combined = {}
+        for workflow, genotype in genotypes.items():
+            # Drop plasmid comparison, not reliable
+            if 'plasmid' in genotype.columns:
+                genotype.drop(columns='plasmid', inplace=True)
+            if 'plasmid' in reference.columns:
+                reference.drop(columns='plasmid', inplace=True)
 
-        # Only common names in both reference and genotype:
-        common = genotype.merge(reference, on="name").name
-        if common_isolates:
-            genotype = genotype[genotype['name'].isin(common)]\
-                .reset_index(drop=True)
-            reference = reference[reference['name'].isin(common)]\
-                .reset_index(drop=True)
-
-        if not len(genotype) == len(reference):
-            raise ValueError
-
-        # Make sure all entries in columns are sorted
-        for col in genotype.columns:
-            interim = [
-                c.split(';') for c in genotype[col]
-            ]
-            sorted_entries = [
-                ";".join(sorted([e.strip() for e in tu])) for tu in interim
-            ]
-            genotype[col] = sorted_entries
-
-        for col in reference.columns:
-            interim = [
-                c.split(';') for c in reference[col]
-            ]
-
-            sorted_entries = [
-                ";".join(sorted([e.strip() for e in tu])) for tu in interim
-            ]
-            reference[col] = sorted_entries
-
-        if exclude:
-            reference = reference.loc[~reference['name'].isin(exclude), :].reset_index(drop=True)
-            genotype = genotype.loc[~genotype['name'].isin(exclude), :].reset_index(drop=True)
-
-        g1 = genotype.drop(columns='name')
-        r1 = reference.drop(columns='name')
-
-        match1 = g1.eq(r1)
-
-        # ONT mask of failed calls to track down issues and wrong hybrids
-        # based on differential mecA presence (main indicator)
-        # between nanopore assemblies and Illumina assemblies + genotypes
-        #
-        # fails = match1.drop(columns='spa')  # don't consider spa for now
-        #
-        # failed = [row.name for _, row in fails.iterrows() if False in row.values]
-        #
-
-        # print(
-        #     r1[r1.index.isin(failed)]
-        # )
-        # print(
-        #     match1[match1.index.isin(failed)]
-        # )
-        # print(
-        #     g1[g1.index.isin(failed)]
-        # )
-
-        match1_means = match1.mean(axis=0)
-
-        if genotype2 is not None:
-            if 'plasmid' in genotype2.columns:
-                genotype2.drop(columns='plasmid', inplace=True)
-
+            # Only common names in both reference and genotype:
+            common = genotype.merge(reference, on="name").name
             if common_isolates:
-                genotype2 = genotype2[
-                    genotype2['name'].isin(common)
-                ].reset_index(drop=True)
+                genotype = genotype[genotype['name'].isin(common)]\
+                    .reset_index(drop=True)
+                reference = reference[reference['name'].isin(common)]\
+                    .reset_index(drop=True)
 
-            for col in genotype2.columns:
+            if not len(genotype) == len(reference):
+                raise ValueError
+
+            # Make sure all entries in columns are sorted
+            for col in genotype.columns:
                 interim = [
-                    c.split(';') for c in genotype2[col]
+                    c.split(';') for c in genotype[col]
                 ]
                 sorted_entries = [
                     ";".join(sorted([e.strip() for e in tu])) for tu in interim
                 ]
-                genotype2[col] = sorted_entries
+                genotype[col] = sorted_entries
+
+            for col in reference.columns:
+                interim = [
+                    c.split(';') for c in reference[col]
+                ]
+
+                sorted_entries = [
+                    ";".join(sorted([e.strip() for e in tu])) for tu in interim
+                ]
+                reference[col] = sorted_entries
 
             if exclude:
-                genotype2 = genotype2.loc[
-                    ~genotype2['name'].isin(exclude), :
-                ].reset_index(drop=True)
+                reference = reference.loc[~reference['name'].isin(exclude), :].reset_index(drop=True)
+                genotype = genotype.loc[~genotype['name'].isin(exclude), :].reset_index(drop=True)
 
-            if not len(genotype2) == len(reference):
-                raise ValueError
+            g = genotype.drop(columns='name')
+            r = reference.drop(columns='name')
 
-            g2 = genotype2.drop(columns='name')
+            match = g.eq(r)
+            match_means = match.mean(axis=0)
+            combined[workflow] = match_means
 
-            match2 = g2.eq(r1)
-
-            match2_means = match2.mean(axis=0)
-
-            combined = pandas.DataFrame(
-                {'ont': match1_means, 'hybrid': match2_means}
+        fig, ax = plt.subplots(
+            nrows=1, ncols=1, figsize=(
+                1 * 7, 1 * 4.5
             )
+        )
 
-            fig, ax = plt.subplots(
-                nrows=1, ncols=1, figsize=(
-                    1 * 7, 1 * 4.5
-                )
-            )
+        fig.subplots_adjust(hspace=0.8)
 
-            fig.subplots_adjust(hspace=0.8)
-
-            sns.heatmap(
-                combined, linewidths=.5, cmap="Greens", ax=ax, annot=True
-            )
-            plt.tight_layout()
-            fig.savefig(self.outdir / 'genotype_reference_heatmap.png')
-
-        print('Reference')
-        print(reference)
-        print('ONT')
-        print(genotype)
-        print('Hybrid')
-        print(genotype2)
+        sns.heatmap(
+            combined, linewidths=.5, cmap="Greens", ax=ax, annot=True
+        )
+        plt.tight_layout()
+        fig.savefig(self.outdir / 'genotype_reference_heatmap.png')
 
     def collect_statistics(self, mode: str = '.filtered') -> pandas.DataFrame or None:
 

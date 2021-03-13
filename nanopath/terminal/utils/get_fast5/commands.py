@@ -64,6 +64,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension, threads):
     if subset:
         df = pandas.read_csv(subset, sep='\t')
         names = df.iloc[:, 0].tolist()
+        print(f"Subset: {names}")
     else:
         names = []
 

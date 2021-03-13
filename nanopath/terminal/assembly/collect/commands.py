@@ -46,8 +46,6 @@ def collect(path, exclude, exclude_genotype, outdir):
 
     nanoq = ap.collect_statistics(mode="")
 
-    print(nanoq)
-
     if exclude:
         excl = pandas.read_csv(
             exclude, header=None, names=['name']
@@ -55,9 +53,9 @@ def collect(path, exclude, exclude_genotype, outdir):
     else:
         excl = None
 
-    if ont is not None and hybrid is not None and unicycler is not None:
+    if ont is not None and (hybrid is not None or unicycler is not None):
         ap.plot_genotype_heatmap(
-            genotype=ont, genotype2=hybrid, reference=ref, exclude=excl
+            reference=ref, genotypes={'ont': ont, 'hybrid': hybrid, 'unicycler': unicycler}, exclude=excl
         )
 
     dnadiff = ap.collect_dnadiff(exclude=excl)
@@ -84,12 +82,11 @@ def collect(path, exclude, exclude_genotype, outdir):
             outdir / 'unicycler_vs_ref.tsv', sep='\t', index=False
         )
 
-
     ref.to_csv(
         outdir / 'illumina_reference_genotypes.tsv', sep='\t', index=False
     )
 
     nanoq.to_csv(
-        outdir / 'read_qc.tsv', sep='\t', index=False
+        outdir / 'read_qc_all.tsv', sep='\t', index=False
     )
 
