@@ -95,7 +95,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension, threads):
 
         run_cmd(
             f"fast5_subset --input {fast5} --save_path {outdir / name} --read_id_list {read_id_list} "
-            f"--batch_size {batch_size} --recursive --filename_base {name} --threads {threads}"
+            f"--batch_size {batch_size} --recursive --filename_base {name}_ --threads {threads}"
         )
 
 
