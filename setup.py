@@ -34,13 +34,14 @@ setup(
         "dateparser",
         "pyyaml",
         "phylo-treetime",
-        "ont_fast5_api",
+        "ont-fast5-api",
         "weasyprint",
         "requests",
         "pyvcf",
         "beautifulsoup4",
         "bcbio-gff",
-        "lxml"
+        "lxml",
+        "pyfastaq"
     ],
     entry_points="""
         [console_scripts]

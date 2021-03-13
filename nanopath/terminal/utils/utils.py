@@ -1,5 +1,7 @@
 import click
 
+from .get_fast5 import get_fast5
+from .plot_coverage_summary import plot_coverage_summary
 from .rename_barcodes import rename_barcodes
 from .snippy_core_to_clair import snippy_core_to_clair
 from .get_nctc import get_nctc
@@ -32,3 +34,4 @@ utils.add_command(get_nctc)
 utils.add_command(plot_variant_violins)
 utils.add_command(plot_mlst_heatmap)
 utils.add_command(snippy_core_to_clair)
+utils.add_command(plot_coverage_summary)

@@ -16,7 +16,7 @@ from collections import Counter
 @click.option(
     "--palette", "-p", type=str, help="Heatmap palette [Blues]", default="Blues"
 )
-def plot_mlst_heatmap(
+def plot_coverage_summary(
     data, name, palette
 ):
 
@@ -31,36 +31,12 @@ def plot_mlst_heatmap(
     )
 
     df = pandas.read_csv(data, sep="\t")
-    if 'name' in df.columns:
-        df.drop(columns='name', inplace=True)
 
-    counters = df.apply(Counter, axis='columns').value_counts()
-
-    rows = []
-    for i, c in enumerate(counters):
-        meta = list(
-            counters.index[i].keys()
-        )
-        row = [meta[0], meta[1], c]
-        rows.append(row)
-
-    df = pandas.DataFrame(rows, columns=["location", 'mlst', 'count'])
-    df = df.dropna()
-
-    df = df[df['mlst'] != 'ST-']  # exclude MLST SLVs
-    df['mlst'] = [int(v.strip("ST")) for v in df['mlst']]
-    df = df.sort_values('mlst')
-
-    sns.heatmap(
-        df.pivot("mlst", "location", "count"), cmap=palette, ax=ax, linewidths=1, annot=True, cbar=False
-    )
     ax.set_facecolor('#eeeeee')
     ax.yaxis.label.set_color('gray')
     ax.tick_params(axis='x', colors='gray')
     ax.tick_params(axis='y', colors='gray')
 
-    plt.ylabel("Sequence type (ST)\n")
-    plt.xlabel("")
     plt.yticks(rotation=0)
 
     plt.tight_layout()

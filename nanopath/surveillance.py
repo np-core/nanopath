@@ -156,16 +156,19 @@ class Survey:
     Simple accessor class to pull short-read data from the ENA.
     """
 
-    def __init__(self, outdir: Path = None):
+    def __init__(self, outdir: Path = None, fields: str = "all"):
 
         self.outdir = outdir
 
-        self.fields = "study_accession,sample_accession,run_accession,tax_id,scientific_name," \
-            "fastq_ftp,fastq_bytes,submitted_ftp,submitted_bytes," \
-            "read_count,base_count," \
-            "instrument_platform,instrument_model," \
-            "library_layout,library_source,library_strategy," \
-            "location,country,collection_date"
+        if fields == "all":
+            self.fields = "all"
+        else:
+            self.fields = "study_accession,sample_accession,run_accession,tax_id,scientific_name," \
+                "fastq_ftp,fastq_bytes,submitted_ftp,submitted_bytes," \
+                "read_count,base_count," \
+                "instrument_platform,instrument_model," \
+                "library_layout,library_source,library_strategy," \
+                "location,country,collection_date"
 
         self.url = f"https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
                    f"&fields={self.fields}&query="

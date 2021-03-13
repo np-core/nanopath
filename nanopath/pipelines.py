@@ -1098,7 +1098,7 @@ class AssemblyPipeline(PoreLogger):
         return df
 
     def collect_genotypes(
-        self, component: str = 'ont', name_index_regex: str = r"\d+",
+        self, component: str = 'ont', name_index_regex: str = r"\d+", exclude: list = None
     ):
 
         genotype_path = self.components[component] / 'genotypes'
@@ -1109,9 +1109,14 @@ class AssemblyPipeline(PoreLogger):
         elif component == "hybrid":
             fselect = "*.hybrid.tab"  # Hybrid assembly without Medaka pre-polish
             fstrip = [".medaka.hybrid.fasta"]
-        else:
+        elif component == "illumina":
             fselect = "*.illumina.tab"  # Illumina assembly
             fstrip = [".assembly.fasta", ".fasta"]
+        elif component == "unicycler":
+            fselect = "*.unicycler.tab"  # Unicycler assembly
+            fstrip = [".unicycler.fasta", ".fasta"]
+        else:
+            raise ValueError
 
         genotype_files = [f for f in genotype_path.glob(fselect)]
         resistance_files = [f for f in genotype_path.glob("*.json")]
@@ -1139,6 +1144,10 @@ class AssemblyPipeline(PoreLogger):
                 genotypes = genotypes.sort_values('name').reset_index(drop=True)
 
             genotype_name = self.outdir / f'{component}_genotypes.tsv'
+
+            if exclude is not None:
+                genotypes = genotypes.drop(columns=exclude)
+
             genotypes.to_csv(genotype_name, sep='\t', index=False)
 
         else:

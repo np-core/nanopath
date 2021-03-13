@@ -19,20 +19,30 @@ from pathlib import Path
     help='Path to file with one name per line to exclude (e.g. from manual curation)'
 )
 @click.option(
+    '--exclude_genotype',
+    '-g',
+    default="",
+    type=str,
+    help='List of comma separated columns of genotypes to exclude'
+)
+@click.option(
     '--outdir',
     '-o',
     default='collected',
     type=Path,
     help='Path to server collection output directory'
 )
-def collect(path, exclude, outdir):
+def collect(path, exclude, exclude_genotype, outdir):
     """ Collect output from assembly pipeline into a data table """
 
     ap = AssemblyPipeline(path=path, outdir=outdir)
 
-    ref = ap.collect_genotypes(component='illumina')
-    ont = ap.collect_genotypes(component='ont')
-    hybrid = ap.collect_genotypes(component='hybrid')
+    exclude_genotype = exclude_genotype.split(',')
+
+    ref = ap.collect_genotypes(component='illumina', exclude=exclude_genotype)
+    ont = ap.collect_genotypes(component='ont', exclude=exclude_genotype)
+    hybrid = ap.collect_genotypes(component='hybrid', exclude=exclude_genotype)
+    unicycler = ap.collect_genotypes(component='unicycler', exclude=exclude_genotype)
 
     nanoq = ap.collect_statistics(mode="")
 
@@ -45,7 +55,7 @@ def collect(path, exclude, outdir):
     else:
         excl = None
 
-    if ont is not None and hybrid is not None:
+    if ont is not None and hybrid is not None and unicycler is not None:
         ap.plot_genotype_heatmap(
             genotype=ont, genotype2=hybrid, reference=ref, exclude=excl
         )
@@ -59,6 +69,9 @@ def collect(path, exclude, outdir):
         hybrid_dnadiff = dnadiff.loc[dnadiff['branch'] == 'hybrid_medaka', :]\
             .merge(hybrid, on="name").merge(nanoq, on="name")
 
+        unicycler_dnadiff = dnadiff.loc[dnadiff['branch'] == 'unicycler', :] \
+            .merge(ont, on="name", how='inner').merge(nanoq, on="name")
+
         ont_dnadiff.to_csv(
             outdir / 'ont_vs_ref.tsv', sep='\t', index=False
         )
@@ -67,7 +80,16 @@ def collect(path, exclude, outdir):
             outdir / 'hybrid_vs_ref.tsv', sep='\t', index=False
         )
 
+        unicycler_dnadiff.to_csv(
+            outdir / 'unicycler_vs_ref.tsv', sep='\t', index=False
+        )
+
+
     ref.to_csv(
         outdir / 'illumina_reference_genotypes.tsv', sep='\t', index=False
+    )
+
+    nanoq.to_csv(
+        outdir / 'read_qc.tsv', sep='\t', index=False
     )
 
