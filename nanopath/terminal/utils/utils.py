@@ -24,6 +24,7 @@ def utils():
     pass
 
 
+utils.add_command(get_fast5)
 utils.add_command(rename_barcodes)
 utils.add_command(assess)
 utils.add_command(compose)
