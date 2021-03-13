@@ -1076,11 +1076,10 @@ class AssemblyPipeline(PoreLogger):
             'ont_medaka' for _ in range(df_ont.__len__())
         ]
         df_hybrid_medaka['branch'] = [
-            'hybrid_medaka' for _ in range(df_ont.__len__())
+            'hybrid_medaka' for _ in range(df_hybrid_medaka.__len__())
         ]
-
         df_unicycler['branch'] = [
-            'hybrid_unicycler' for _ in range(df_ont.__len__())
+            'hybrid_unicycler' for _ in range(df_unicycler.__len__())
         ]
 
         combined = pandas.concat(
@@ -1299,11 +1298,7 @@ class AssemblyPipeline(PoreLogger):
             match = g.eq(r)
             match_means = match.mean(axis=0)
 
-            print(match_means)
-
             combined[workflow] = match_means
-
-        print(combined)
 
         df = pandas.DataFrame(combined)
 
