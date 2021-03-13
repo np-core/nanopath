@@ -62,7 +62,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
 
     for fq in fq_files:
 
-        name = fq.name
+        name = fq.stem
 
         # Subset checks
         if names:
