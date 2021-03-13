@@ -21,7 +21,7 @@ from pathlib import Path
 @click.option(
     '--exclude_genotype',
     '-g',
-    default="",
+    default=None,
     type=str,
     help='List of comma separated columns of genotypes to exclude'
 )
@@ -37,7 +37,8 @@ def collect(path, exclude, exclude_genotype, outdir):
 
     ap = AssemblyPipeline(path=path, outdir=outdir)
 
-    exclude_genotype = exclude_genotype.split(',')
+    if exclude_genotype is not None:
+        exclude_genotype = exclude_genotype.split(',')
 
     ref = ap.collect_genotypes(component='illumina', exclude=exclude_genotype)
     ont = ap.collect_genotypes(component='ont', exclude=exclude_genotype)
