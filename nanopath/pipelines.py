@@ -1257,6 +1257,9 @@ class AssemblyPipeline(PoreLogger):
             if 'plasmid' in reference.columns:
                 reference.drop(columns='plasmid', inplace=True)
 
+            if workflow == 'unicycler':
+                print(genotype)
+                
             # Only common names in both reference and genotype:
             common = genotype.merge(reference, on="name").name
             if common_isolates:
@@ -1292,9 +1295,6 @@ class AssemblyPipeline(PoreLogger):
                 reference[col] = sorted_entries
 
 
-            if workflow == 'unicycler':
-                print(genotype)
-
             if exclude:
                 reference = reference.loc[~reference['name'].isin(exclude), :].reset_index(drop=True)
                 genotype = genotype.loc[~genotype['name'].isin(exclude), :].reset_index(drop=True)
@@ -1302,10 +1302,6 @@ class AssemblyPipeline(PoreLogger):
             g = genotype.drop(columns='name')
             r = reference.drop(columns='name')
 
-
-            if workflow == 'unicycler':
-                print(g)
-                print(r)
 
             match = g.eq(r)
             match_means = match.mean(axis=0)
