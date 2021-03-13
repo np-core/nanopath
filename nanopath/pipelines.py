@@ -1083,7 +1083,7 @@ class AssemblyPipeline(PoreLogger):
         ]
 
         combined = pandas.concat(
-            (df_ont, df_hybrid_medaka), axis=0
+            (df_ont, df_hybrid_medaka, df_unicycler), axis=0
         )
 
         if exclude:
