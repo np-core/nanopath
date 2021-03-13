@@ -69,6 +69,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
             if name in names:
                 pass
             else:
+                print(f"{name} not in subset, ignoring")
                 continue
 
         # Create files:
@@ -82,6 +83,8 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
                 outfile.write(read_id + '\n')
 
         # Run ONT Fast5 API:
+
+        print(f"Fetching Fast5 for: {fq}")
 
         run_cmd(
             f"fast5_subset --input {fast5} --save_path {outdir / name} --read_id_list {read_id_list} "
