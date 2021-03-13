@@ -74,9 +74,9 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
         # Create files:
 
         read_ids = [seq.id for seq in sequences.file_reader(str(fq))]
-        output_directory = (outdir / name).mkdir(parents=True, exist_ok=True)
+        (outdir / name).mkdir(parents=True, exist_ok=True)
 
-        read_id_list = output_directory / f"{name}.txt"
+        read_id_list = outdir / name / f"{name}.txt"
         with open(read_id_list) as outfile:
             for read_id in read_ids:
                 outfile.write(read_id + '\n')
@@ -84,7 +84,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
         # Run ONT Fast5 API:
 
         run_cmd(
-            f"fast5_subset --input {fast5} --save_path {output_directory} --read_id_list {read_id_list} "
+            f"fast5_subset --input {fast5} --save_path {outdir / name} --read_id_list {read_id_list} "
             f"--batch_size {batch_size} --recursive --filename_base {name}"
         )
 
