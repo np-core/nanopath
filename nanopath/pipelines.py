@@ -1298,7 +1298,12 @@ class AssemblyPipeline(PoreLogger):
 
             match = g.eq(r)
             match_means = match.mean(axis=0)
+
+            print(match_means)
+
             combined[workflow] = match_means
+
+        print(combined)
 
         df = pandas.DataFrame(combined)
 
