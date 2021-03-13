@@ -1012,7 +1012,8 @@ class AssemblyPipeline(PoreLogger):
         self.components = {
             'illumina': self.path / 'illumina',
             'ont': self.path / 'ont',
-            'hybrid': self.path / 'hybrid'
+            'hybrid': self.path / 'hybrid',
+            'unicycler': self.path / 'unicycler'
         }
 
     def collect_dnadiff(self, exclude: list = None, string_sort: bool = False):
@@ -1023,9 +1024,11 @@ class AssemblyPipeline(PoreLogger):
         ont_medaka_vs_ref = ".medaka.report"
         # Hybrid assembly from polished assembly corrected with Illumina
         hybrid_medaka_vs_ref = ".medaka_hybrid.report"
+        unicycler_vs_ref = ".unicycler.report"
 
         ont_files = dnadiff_path.glob("*"+ont_medaka_vs_ref)
         hybrid_medaka_files = dnadiff_path.glob("*"+hybrid_medaka_vs_ref)
+        unicycler_files = dnadiff_path.glob("*"+unicycler_vs_ref)
 
         try:
             df_ont = pandas.concat(
@@ -1035,7 +1038,7 @@ class AssemblyPipeline(PoreLogger):
                 ]
             )
         except ValueError:
-            self.logger.info('Could not detect files for Dnadiff')
+            self.logger.info('Could not detect files for Dnadiff (ONT)')
             return
 
         try:
@@ -1046,21 +1049,38 @@ class AssemblyPipeline(PoreLogger):
                 ]
             )
         except ValueError:
-            self.logger.info('Could not detect files for Dnadiff')
+            self.logger.info('Could not detect files for Dnadiff (Hybrid)')
+            return
+
+        try:
+            df_unicycler = pandas.concat(
+                [
+                    self.mp.parse_dnadiff(file=f, name_strip=unicycler_vs_ref)
+                    for f in list(unicycler_files)
+                ]
+            )
+        except ValueError:
+            self.logger.info('Could not detect files for Dnadiff (Unicycler)')
             return
 
         if string_sort:
             df_ont = self.str_num_sort_col(df_ont, 'name')
             df_hybrid_medaka = self.str_num_sort_col(df_hybrid_medaka, 'name')
+            df_unicycler = self.str_num_sort_col(df_unicycler, 'name')
         else:
             df_ont = df_ont.sort_values('name')
             df_hybrid_medaka = df_hybrid_medaka.sort_values('name')
+            df_unicycler = df_unicycler.sort_values('name')
 
         df_ont['branch'] = [
             'ont_medaka' for _ in range(df_ont.__len__())
         ]
         df_hybrid_medaka['branch'] = [
             'hybrid_medaka' for _ in range(df_ont.__len__())
+        ]
+
+        df_unicycler['branch'] = [
+            'hybrid_unicycler' for _ in range(df_ont.__len__())
         ]
 
         combined = pandas.concat(
@@ -1114,7 +1134,7 @@ class AssemblyPipeline(PoreLogger):
             fstrip = [".assembly.fasta", ".fasta"]
         elif component == "unicycler":
             fselect = "*.unicycler.tab"  # Unicycler assembly
-            fstrip = [".unicycler.fasta", ".fasta"]
+            fstrip = [".unicycler.fasta"]
         else:
             raise ValueError
 
