@@ -1133,7 +1133,7 @@ class AssemblyPipeline(PoreLogger):
             fstrip = [".assembly.fasta", ".fasta"]
         elif component == "unicycler":
             fselect = "*.unicycler.tab"  # Unicycler assembly
-            fstrip = [".unicycler.fasta"]
+            fstrip = [".unicycler.fasta", ".fasta"]
         else:
             raise ValueError
 
@@ -1257,9 +1257,6 @@ class AssemblyPipeline(PoreLogger):
             if 'plasmid' in reference.columns:
                 reference.drop(columns='plasmid', inplace=True)
 
-            if workflow == 'unicycler':
-                print(genotype)
-                
             # Only common names in both reference and genotype:
             common = genotype.merge(reference, on="name").name
             if common_isolates:
@@ -1267,9 +1264,6 @@ class AssemblyPipeline(PoreLogger):
                     .reset_index(drop=True)
                 reference = reference[reference['name'].isin(common)]\
                     .reset_index(drop=True)
-
-            if workflow == 'unicycler':
-                print(genotype)
 
             if not len(genotype) == len(reference):
                 raise ValueError
@@ -1294,14 +1288,12 @@ class AssemblyPipeline(PoreLogger):
                 ]
                 reference[col] = sorted_entries
 
-
             if exclude:
                 reference = reference.loc[~reference['name'].isin(exclude), :].reset_index(drop=True)
                 genotype = genotype.loc[~genotype['name'].isin(exclude), :].reset_index(drop=True)
 
             g = genotype.drop(columns='name')
             r = reference.drop(columns='name')
-
 
             match = g.eq(r)
             match_means = match.mean(axis=0)
