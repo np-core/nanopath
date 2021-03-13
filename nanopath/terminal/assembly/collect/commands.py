@@ -53,7 +53,7 @@ def collect(path, exclude, exclude_genotype, outdir):
     else:
         excl = None
 
-    if ont is not None and (hybrid is not None or unicycler is not None):
+    if ont is not None and hybrid is not None and unicycler is not None:
         ap.plot_genotype_heatmap(
             reference=ref, genotypes={'ont': ont, 'hybrid': hybrid, 'unicycler': unicycler}, exclude=excl
         )
@@ -67,7 +67,7 @@ def collect(path, exclude, exclude_genotype, outdir):
         hybrid_dnadiff = dnadiff.loc[dnadiff['branch'] == 'hybrid_medaka', :]\
             .merge(hybrid, on="name").merge(nanoq, on="name")
 
-        unicycler_dnadiff = dnadiff.loc[dnadiff['branch'] == 'unicycler', :] \
+        unicycler_dnadiff = dnadiff.loc[dnadiff['branch'] == 'hybrid_unicycler', :] \
             .merge(ont, on="name", how='inner').merge(nanoq, on="name")
 
         ont_dnadiff.to_csv(
