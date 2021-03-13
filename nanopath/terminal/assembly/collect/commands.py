@@ -54,7 +54,9 @@ def collect(path, exclude, exclude_genotype, outdir):
     else:
         excl = None
 
-    if ont is not None and hybrid is not None and unicycler is not None:
+    print(unicycler)
+
+    if ont is not None or hybrid is not None or unicycler is not None:
         ap.plot_genotype_heatmap(
             reference=ref, genotypes={'ont': ont, 'hybrid': hybrid, 'unicycler': unicycler}, exclude=excl
         )
