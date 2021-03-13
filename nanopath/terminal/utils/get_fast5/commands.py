@@ -78,7 +78,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
         (outdir / name).mkdir(parents=True, exist_ok=True)
 
         read_id_list = outdir / name / f"{name}.txt"
-        with open(read_id_list) as outfile:
+        with open(read_id_list, 'w') as outfile:
             for read_id in read_ids:
                 outfile.write(read_id + '\n')
 
