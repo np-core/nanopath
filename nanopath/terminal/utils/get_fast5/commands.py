@@ -47,7 +47,14 @@ from nanopath.utils import run_cmd
     default=None,
     help='Path to file with one file basename per line of isolate to include'
 )
-def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
+@click.option(
+    '--threads',
+    '-t',
+    type=int,
+    default=12,
+    help='Threads to use for fetching Fast5'
+)
+def get_fast5(fastq, fast5, subset, batch_size, outdir, extension, threads):
 
     """ Get Fast5 reads from basecalled Fastq """
 
@@ -88,7 +95,7 @@ def get_fast5(fastq, fast5, subset, batch_size, outdir, extension):
 
         run_cmd(
             f"fast5_subset --input {fast5} --save_path {outdir / name} --read_id_list {read_id_list} "
-            f"--batch_size {batch_size} --recursive --filename_base {name}"
+            f"--batch_size {batch_size} --recursive --filename_base {name} --threads {threads}"
         )
 
 
