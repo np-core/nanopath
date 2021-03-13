@@ -1300,6 +1300,8 @@ class AssemblyPipeline(PoreLogger):
             match_means = match.mean(axis=0)
             combined[workflow] = match_means
 
+        df = pandas.DataFrame(combined)
+
         fig, ax = plt.subplots(
             nrows=1, ncols=1, figsize=(
                 1 * 7, 1 * 4.5
@@ -1309,7 +1311,7 @@ class AssemblyPipeline(PoreLogger):
         fig.subplots_adjust(hspace=0.8)
 
         sns.heatmap(
-            combined, linewidths=.5, cmap="Greens", ax=ax, annot=True
+            df, linewidths=.5, cmap="Greens", ax=ax, annot=True
         )
         plt.tight_layout()
         fig.savefig(self.outdir / 'genotype_reference_heatmap.png')
