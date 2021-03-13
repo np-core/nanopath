@@ -1265,6 +1265,9 @@ class AssemblyPipeline(PoreLogger):
                 reference = reference[reference['name'].isin(common)]\
                     .reset_index(drop=True)
 
+            if workflow == 'unicycler':
+                print(genotype)
+
             if not len(genotype) == len(reference):
                 raise ValueError
 
@@ -1288,12 +1291,21 @@ class AssemblyPipeline(PoreLogger):
                 ]
                 reference[col] = sorted_entries
 
+
+            if workflow == 'unicycler':
+                print(genotype)
+
             if exclude:
                 reference = reference.loc[~reference['name'].isin(exclude), :].reset_index(drop=True)
                 genotype = genotype.loc[~genotype['name'].isin(exclude), :].reset_index(drop=True)
 
             g = genotype.drop(columns='name')
             r = reference.drop(columns='name')
+
+
+            if workflow == 'unicycler':
+                print(g)
+                print(r)
 
             match = g.eq(r)
             match_means = match.mean(axis=0)
