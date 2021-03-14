@@ -16,8 +16,11 @@ from collections import Counter
 @click.option(
     "--palette", "-p", type=str, help="Heatmap palette [Blues]", default="Blues"
 )
+@click.option(
+    "--column", "-c", type=str, help="Column to subset the data", default="cluster"
+)
 def plot_coverage_summary(
-    data, name, palette
+    data, name, palette, column
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -32,14 +35,10 @@ def plot_coverage_summary(
 
     df = pandas.read_csv(data, sep="\t")
 
-    ax.set_facecolor('#eeeeee')
-    ax.yaxis.label.set_color('gray')
-    ax.tick_params(axis='x', colors='gray')
-    ax.tick_params(axis='y', colors='gray')
-
-    plt.yticks(rotation=0)
+    sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette)
 
     plt.tight_layout()
+
     fig.savefig(f'{name}.pdf')
     fig.savefig(f'{name}.svg')
     fig.savefig(f'{name}.png')
