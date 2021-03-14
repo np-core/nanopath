@@ -1311,7 +1311,7 @@ class AssemblyPipeline(PoreLogger):
         fig.subplots_adjust(hspace=0.8)
 
         g = sns.heatmap(
-            df, linewidths=.5, cmap="Greens", ax=ax, annot=True, vmin=0, vmax=1, annot_kws={'fontweight': 'bold'}
+            df, linewidths=.5, cmap="Greens", ax=ax, annot=True, vmin=0, vmax=1, fmt=".3f", annot_kws={'fontweight': 'bold'}
         )
         g.set_yticklabels(g.get_yticklabels(), rotation=0)
 
