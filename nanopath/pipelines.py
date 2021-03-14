@@ -1310,11 +1310,12 @@ class AssemblyPipeline(PoreLogger):
 
         fig.subplots_adjust(hspace=0.8)
 
-        sns.heatmap(
+        g = sns.heatmap(
             df, linewidths=.5, cmap="Greens", ax=ax, annot=True, vmin=0, vmax=1
         )
+        g.set_yticklabels(g.get_yticklabels(), rotation=0)
 
-        # plt.tight_layout()
+        plt.tight_layout()
         fig.savefig(self.outdir / 'genotype_reference_heatmap.png')
 
     def collect_statistics(self, mode: str = '.filtered') -> pandas.DataFrame or None:
