@@ -36,7 +36,7 @@ def plot_assembly_dnadiff(
     qc = pandas.read_csv(dir / 'read_qc_all.tsv', sep="\t")
 
     dnadiff = pandas.concat(
-        [pandas.read_csv(f, sep='\t') for f in ('ont_vs_ref.tsv', 'hybrid_vs_ref.tsv', 'unicycler_vs_ref.tsv')]
+        [pandas.read_csv(dir / f, sep='\t') for f in ('ont_vs_ref.tsv', 'hybrid_vs_ref.tsv', 'unicycler_vs_ref.tsv')]
     )
 
     dnadiff_cov = dnadiff.merge(qc, on='name')
