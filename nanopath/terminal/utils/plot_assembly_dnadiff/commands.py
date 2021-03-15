@@ -70,7 +70,7 @@ def plot_assembly_dnadiff(
         data = data[data['count'] <= count_limit]
 
     sns.despine()
-    sns.violinplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray')
+    sns.stripplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray', dodge=True)
 
     plt.tight_layout()
     plt.ylabel("Count\n")
