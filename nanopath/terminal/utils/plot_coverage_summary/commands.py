@@ -43,6 +43,8 @@ def plot_coverage_summary(
     plt.axvline(x=threshold, ls="--", color="black")
 
     plt.tight_layout()
+    plt.ylabel("Outbreak\n")
+    plt.xlabel("\nMean coverage")
 
     fig.savefig(f'{name}.pdf')
     fig.savefig(f'{name}.svg')
