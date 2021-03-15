@@ -46,7 +46,7 @@ def plot_assembly_dnadiff(
     print(dnadiff_cov)
 
     if mincov > 0:
-        dnadiff_cov = dnadiff_cov[dnadiff_cov['mean_coverage'] > mincov]
+        dnadiff_cov = dnadiff_cov[dnadiff_cov['mean_coverage_x'] > mincov]
 
     print(dnadiff_cov)
 
