@@ -50,14 +50,15 @@ def plot_assembly_dnadiff(
 
     print(dnadiff_cov)
 
-    snps = dnadiff['snps']
-    indels = dnadiff['indels']
-    branch = dnadiff['branch']
+    snps = dnadiff['snps'].tolist()
+    indels = dnadiff['indels'].tolist()
+    branch = dnadiff['branch'].tolist()
 
     data = pandas.DataFrame(
         {
             'variants': ['snp' for _ in snps] + ['indel' for _ in indels],
-            'count': snps + indels
+            'count': snps + indels,
+            'branch': branch + branch
          }
     )
 
