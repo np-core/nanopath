@@ -35,6 +35,8 @@ def plot_assembly_dnadiff(
 
     qc = pandas.read_csv(dir / 'read_qc_all.tsv', sep="\t")
 
+    print(qc)
+
     dnadiff = pandas.concat(
         [pandas.read_csv(dir / f, sep='\t') for f in ('ont_vs_ref.tsv', 'hybrid_vs_ref.tsv', 'unicycler_vs_ref.tsv')]
     )
