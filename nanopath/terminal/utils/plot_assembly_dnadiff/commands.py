@@ -20,10 +20,10 @@ from collections import Counter
     "--mincov", "-m", type=int, help="Minimum coverage threshold", default=3
 )
 @click.option(
-    "--limit", "-l", type=int, help="Limit on counts to exclude for visibiliy", default=3
+    "--count_limit", "-l", type=int, help="Variant count limit to exclude tails of low coverage isoaltes", default=0
 )
 def plot_assembly_dnadiff(
-    dir, name, palette, mincov
+    dir, name, palette, mincov, count_limit
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -51,6 +51,7 @@ def plot_assembly_dnadiff(
     if mincov > 0:
         dnadiff_cov = dnadiff_cov[dnadiff_cov['mean_coverage_x'] > mincov]
 
+
     print(dnadiff_cov)
 
     snps = dnadiff['snps'].tolist()
@@ -64,6 +65,9 @@ def plot_assembly_dnadiff(
             'branch': branch + branch
          }
     )
+
+    if count_limit > 0:
+        data = data[data['count'] <= count_limit]
 
     sns.despine()
     sns.violinplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray')
