@@ -19,8 +19,11 @@ from collections import Counter
 @click.option(
     "--column", "-c", type=str, help="Column to subset the data", default="cluster"
 )
+@click.option(
+    "--threshold", "-t", type=int, help="Coverage threshold", default=10
+)
 def plot_coverage_summary(
-    data, name, palette, column
+    data, name, palette, column, threshold
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -37,7 +40,7 @@ def plot_coverage_summary(
 
     sns.despine()
     sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette)
-    plt.vlines(x=10, linestyles="dashed")
+    plt.axvline(x=threshold, ls="--")
 
     plt.tight_layout()
 
