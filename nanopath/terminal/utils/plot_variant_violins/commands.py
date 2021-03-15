@@ -33,7 +33,7 @@ from numpy import log10, linspace, inf, nan
     "--sep", "-si", default="\t", help="Input delimiter [\\t]", type=str,
 )
 @click.option(
-    "--title_ref", "-tr", default="ST93", help="Title of reference used for variant calling [ST93]", type=str,
+    "--title_ref", "-tr", default="ST93", help="Title of reference used for variant calling [ST93,ST93,ST93]", type=str,
 )
 @click.option(
     "--legend_size", "-ls", default=8, help="Legend size", type=int,
