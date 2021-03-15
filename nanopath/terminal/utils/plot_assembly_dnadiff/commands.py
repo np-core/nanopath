@@ -22,8 +22,11 @@ from collections import Counter
 @click.option(
     "--count_limit", "-l", type=int, help="Variant count limit to exclude tails of low coverage isoaltes", default=0
 )
+@click.option(
+    "--plot_type", "-t", type=str, help="Plot type: violin or strip", default="strip"
+)
 def plot_assembly_dnadiff(
-    dir, name, palette, mincov, count_limit
+    dir, name, palette, mincov, count_limit, plot_type
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -51,7 +54,6 @@ def plot_assembly_dnadiff(
     if mincov > 0:
         dnadiff_cov = dnadiff_cov[dnadiff_cov['mean_coverage_x'] > mincov]
 
-
     print(dnadiff_cov)
 
     snps = dnadiff['snps'].tolist()
@@ -70,8 +72,14 @@ def plot_assembly_dnadiff(
         data = data[data['count'] <= count_limit]
 
     sns.despine()
-    sns.stripplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray', dodge=True)
-
+    if plot_type == 'strip':
+        sns.stripplot(
+            y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='darkgray', dodge=True
+        )
+    else:
+        sns.violinplot(
+            y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, dodge=True
+        )
     plt.tight_layout()
     plt.ylabel("Count\n")
     plt.xlabel("\nAssembly")
