@@ -14,7 +14,7 @@ from collections import Counter
     "--name", "-n", type=str, help="Plot file output name [mlst]", default="heatmap"
 )
 @click.option(
-    "--palette", "-p", type=str, help="Heatmap palette [Blues]", default="Blues"
+    "--palette", "-p", type=str, help="Heatmap palette [Blues]", default="Greens"
 )
 @click.option(
     "--column", "-c", type=str, help="Column to subset the data", default="cluster"
@@ -35,7 +35,9 @@ def plot_coverage_summary(
 
     df = pandas.read_csv(data, sep="\t")
 
+    sns.despine()
     sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette)
+    plt.vlines(x=10, linestyles="dashed")
 
     plt.tight_layout()
 
