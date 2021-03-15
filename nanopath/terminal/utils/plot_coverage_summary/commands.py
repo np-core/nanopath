@@ -39,7 +39,7 @@ def plot_coverage_summary(
     df = pandas.read_csv(data, sep="\t")
 
     sns.despine()
-    sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette)
+    sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette, edgecolor='gray')
     plt.axvline(x=threshold, ls="--", color="black")
 
     plt.tight_layout()

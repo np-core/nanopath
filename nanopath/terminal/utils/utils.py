@@ -1,5 +1,6 @@
 import click
 
+from .plot_assembly_dnadiff import plot_assembly_dnadiff
 from .get_fast5 import get_fast5
 from .plot_coverage_summary import plot_coverage_summary
 from .rename_barcodes import rename_barcodes
@@ -24,6 +25,7 @@ def utils():
     pass
 
 
+utils.add_command(plot_assembly_dnadiff)
 utils.add_command(get_fast5)
 utils.add_command(rename_barcodes)
 utils.add_command(assess)
