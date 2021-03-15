@@ -19,6 +19,9 @@ from collections import Counter
 @click.option(
     "--mincov", "-m", type=int, help="Minimum coverage threshold", default=3
 )
+@click.option(
+    "--limit", "-l", type=int, help="Limit on counts to exclude for visibiliy", default=3
+)
 def plot_assembly_dnadiff(
     dir, name, palette, mincov
 ):
@@ -63,11 +66,11 @@ def plot_assembly_dnadiff(
     )
 
     sns.despine()
-    sns.stripplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray')
+    sns.violinplot(y="count", x="branch", hue="variant", data=data, ax=ax, palette=palette, edgecolor='gray')
 
     plt.tight_layout()
-    plt.ylabel("Outbreak\n")
-    plt.xlabel("\nMean coverage")
+    plt.ylabel("Count\n")
+    plt.xlabel("\nAssembly")
 
     fig.savefig(f'{name}.pdf')
     fig.savefig(f'{name}.svg')
