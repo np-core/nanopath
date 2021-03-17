@@ -27,7 +27,7 @@ from nanopath.variants import HybridCoreGenome
     '--vcf_glob',
     default="*.vcf",
     type=str,
-    help='Glob of VCFs in --vcf_path to construct core genome from  ["*.vcf"]'
+    help='Glob of VCFs in --vcf_snippy / --vcf_ont to construct core genome from  ["*.vcf"]'
 )
 @click.option(
     '--min_cov',
@@ -41,11 +41,17 @@ from nanopath.variants import HybridCoreGenome
     default="core",
     help='Prefix for output alignment and VCF'
 )
-def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov):
+@click.option(
+    '--threads',
+    type=int,
+    default=8,
+    help='Threads to parse ONT polished VCFs and alignment statistics [8]'
+)
+def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov, threads):
 
     cg = HybridCoreGenome(prefix=prefix, reference=reference)
 
     cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=False)  # only consider snps
-    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=min_cov)
+    cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=min_cov, threads=threads)
 
     cg.call_hybrid_core()

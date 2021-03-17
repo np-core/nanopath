@@ -694,9 +694,9 @@ class ForestSample(Sample):
         self.min_cov = min_cov
 
         self.stats = stats
+
         if stats is not None:  # if min_cov = -1 return empty dict
             self.excluded_positions = self.get_excluded_positions()
-
 
         self.parse()
 

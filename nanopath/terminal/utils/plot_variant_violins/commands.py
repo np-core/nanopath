@@ -42,7 +42,7 @@ from numpy import log10, linspace, inf, nan
     "--palettes", "-pa", default="Blues,Purples", help="Color palettes for panels in each row, col [Blues,Purples]", type=str,
 )
 @click.option(
-    "--locs", "-l", default="best,upper_left,best,upper_left,upper_left,upper_left", help="Position of legends for plots", type=str,
+    "--locs", "-l", default="best,best,best,best,best,best", help="Position of legends for plots", type=str,
 )
 @click.option(
     "--min_column", "-mc", default=None, help="Column for lower threshold subset of data", type=str,

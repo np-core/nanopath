@@ -3,6 +3,7 @@ import click
 import pandas
 from pathlib import Path
 
+
 @click.command()
 @click.option(
     "--data1", "-d1", type=Path, help="Data file 1 with header"

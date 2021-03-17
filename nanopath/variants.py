@@ -19,6 +19,7 @@ from pysam import VariantFile
 from nanopath.utils import PoreLogger, run_cmd
 from nanopath.processors import SnippySample, ClairSample, MedakaSample, ForestSample
 from pathlib import Path
+from multiprocessing import Pool
 
 basesN = ['A', 'C', 'G', 'T']
 perm = permutations(basesN, 2)
@@ -123,34 +124,32 @@ class HybridCoreGenome:
             )
             self.snippy.append(ss)
 
-    def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf"):
+    def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf", threads: int = 8):
 
-        for vcf in sorted([
-            f for f in path.glob(vcf_glob)
-        ]):
-            # class used after filtering with the classifiers to construct core genome,
-            # simply considers snps only regardless of variant caller (default)
+        with Pool(processes=threads) as pool:
+            fs_samples = []
+            for vcf in sorted([f for f in path.glob(vcf_glob)]):
 
-            pysamstats = vcf.parent / f'{vcf.stem}.txt'
+                # class used after filtering with the classifiers to construct core genome,
+                # simply considers snps only regardless of variant caller (default)
 
-            # Low coverage samples on nanopore induce many (100k +) low coverage regions
-            # which are later excluded in the SNP calls - to accommodate low
-            # coverage multiplex isolates, try:
-            #   - use only Snippy low coverage sites  <-- this is similar to low threshold
-            #   - use lower min_cov threshold  <-- this seems to work
-            #   - exclude low coverage isolates <-- prefer not to
+                pysamstats = vcf.parent / f'{vcf.stem}.txt'
 
-            fs = ForestSample(vcf, stats=pysamstats, min_cov=min_cov)
+                # Low coverage samples on nanopore induce many (100k +) low coverage regions
+                # which are later excluded in the SNP calls - to accommodate low
+                # coverage multiplex isolates, try:
+                #   - use only Snippy low coverage sites  <-- this is similar to low threshold
+                #   - use lower min_cov threshold  <-- this seems to work
+                #   - exclude low coverage isolates <-- prefer not to
 
-            self.logger.info(
-                f'Processed {len(fs.data)} SNPs in sample: {fs.name}'
-            )
-            self.ont.append(fs)
+                fs_samples = pool.apply_async(
+                    ForestSample, args=(vcf, pysamstats, min_cov,),
+                    callback=lambda fs: fs_samples.append(fs)
+                )
 
-    def call_hybrid_core(
-        self,
-        include_reference: bool = True
-    ):
+        self.ont = fs_samples.copy()
+
+    def call_hybrid_core(self, include_reference: bool = True):
 
         """ Determine core variants from Snippy and Medaka samples  """
 
