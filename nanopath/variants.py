@@ -147,7 +147,7 @@ class HybridCoreGenome:
                     callback=lambda fs: fs_samples.append(fs)
                 )
 
-        self.ont = fs_samples.copy()
+        self.ont = [result.get() for result in fs_samples]
 
     def call_hybrid_core(self, include_reference: bool = True):
 
