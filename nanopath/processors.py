@@ -692,7 +692,6 @@ class ForestSample(Sample):
         Sample.__init__(self, vcf=vcf)
 
         self.min_cov = min_cov
-
         self.stats = stats
 
         if stats is not None:  # if min_cov = -1 return empty dict
