@@ -142,10 +142,11 @@ class HybridCoreGenome:
                 #   - use lower min_cov threshold  <-- this seems to work
                 #   - exclude low coverage isolates <-- prefer not to
 
-                _ = pool.apply_async(
+                fs = pool.apply_async(
                     ForestSample, args=(vcf, pysamstats, min_cov,),
-                    callback=lambda fs: fs_samples.append(fs)
+                    callback=lambda _: print("Processed multiprocessing ONT Forest sample")
                 )
+                fs_samples.append(fs)
 
             self.ont = [result.get() for result in fs_samples]
 
