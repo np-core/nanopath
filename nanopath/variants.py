@@ -144,7 +144,7 @@ class HybridCoreGenome:
 
                 fs = pool.apply_async(
                     ForestSample, args=(vcf, pysamstats, min_cov,),
-                    callback=lambda f: self.logger.info(f"Processed multiprocessing ONT Forest sample: {f.name}")
+                    callback=lambda f: self.logger.info(f"Processed ONT sample: {f.name}")
                 )
                 fs_samples.append(fs)
 
