@@ -741,9 +741,12 @@ class ForestSample(Sample):
 
                 var += 1
 
-        self.data = pandas.DataFrame(calls).sort_values(
-            ['chromosome', 'position']
-        )
+        try:
+            self.data = pandas.DataFrame(calls).sort_values(
+                ['chromosome', 'position']
+            )
+        except KeyError:
+            self.data = None
 
     def get_excluded_positions(self):
 
@@ -759,7 +762,7 @@ class ForestSample(Sample):
                 low_coverage = []
 
             excluded[chrom] = sorted(low_coverage)
-            self.logger.info(f'{self.name}: found {len(low_coverage)} low coverage or gap regions')
+            self.logger.debug(f'{self.name}: found {len(low_coverage)} low coverage or gap regions')
 
         return excluded
 

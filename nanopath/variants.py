@@ -150,6 +150,13 @@ class HybridCoreGenome:
 
             self.ont = [result.get() for result in fs_samples]
 
+            for fs in self.ont:
+                if fs.data is None:
+                    self.logger.info(f'Could not parse any variants from: {fs.name}')
+
+            self.ont = [fs for fs in self.ont if fs.data is not None]
+
+
     def call_hybrid_core(self, include_reference: bool = True):
 
         """ Determine core variants from Snippy and Medaka samples  """
