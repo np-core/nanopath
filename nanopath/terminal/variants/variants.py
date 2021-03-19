@@ -6,7 +6,8 @@ from .snp_distance import snp_distance
 from .forest_filter import forest_filter
 from .forest_train import forest_train
 from .forest_evaluate import forest_evaluate
-
+from .call_clair import call_clair
+from .call_medaka import call_medaka
 VERSION = "1"
 
 
@@ -19,6 +20,8 @@ def variants():
     pass
 
 
+variants.add_command(call_clair)
+variants.add_command(call_medaka)
 variants.add_command(hybrid_megalodon)
 variants.add_command(hybrid_denovo)
 variants.add_command(forest_evaluate)

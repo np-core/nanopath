@@ -31,9 +31,9 @@ from nanopath.variants import HybridCoreGenome
 )
 @click.option(
     '--min_cov',
-    default=5,
+    default=2,
     type=int,
-    help='Minimum coverage in ONT reference mapping to allow a core SNP site across all isolates; disable with -1 [5]'
+    help='Minimum coverage in ONT reference mapping to allow a core SNP site across all isolates; disable with -1 [2]'
 )
 @click.option(
     '--prefix',

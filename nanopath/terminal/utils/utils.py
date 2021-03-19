@@ -13,7 +13,15 @@ from .sort_df import sort_df
 from .merge_df import merge_df
 from .plot_variant_violins import plot_variant_violins
 from .plot_mlst_heatmap import plot_mlst_heatmap
-
+from .show_dates import show_dates
+from .subset_aln import subset_aln
+from .extract_rate import extract_rate
+from .remove_reference import remove_reference
+from .date_random_test import date_random_test
+from .prepare_metadata import prepare_metadata
+from .remove_invariant import remove_invariant
+from .rename_header import rename_header
+from .print_header import print_header
 
 VERSION = "1"
 
@@ -38,3 +46,12 @@ utils.add_command(plot_variant_violins)
 utils.add_command(plot_mlst_heatmap)
 utils.add_command(snippy_core_to_clair)
 utils.add_command(plot_coverage_summary)
+utils.add_command(show_dates)
+utils.add_command(subset_aln)
+utils.add_command(extract_rate)
+utils.add_command(remove_reference)
+utils.add_command(date_random_test)
+utils.add_command(prepare_metadata)
+utils.add_command(remove_invariant)
+utils.add_command(rename_header)
+utils.add_command(print_header)
