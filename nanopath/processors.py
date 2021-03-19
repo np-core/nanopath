@@ -746,7 +746,6 @@ class ForestSample(Sample):
                 ['chromosome', 'position']
             )
         except KeyError:
-            print("Error")
             self.data = None
 
     def get_excluded_positions(self):

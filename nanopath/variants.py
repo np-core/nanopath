@@ -145,7 +145,8 @@ class HybridCoreGenome:
             self.logger.info(f"Processed ONT sample: {fs.name}")
             fs_samples.append(fs)
 
-        for fs in self.ont:
+
+        for fs in fs_samples:
             if fs.data is None:
                 self.logger.info(f'Could not parse any variants from: {fs.name}')
 
