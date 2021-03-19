@@ -124,31 +124,26 @@ class HybridCoreGenome:
             )
             self.snippy.append(ss)
 
-    def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf", threads: int = 8):
+    def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf"):
 
-        with Pool(processes=threads) as pool:
-            fs_samples = []
-            for vcf in sorted([f for f in path.glob(vcf_glob)]):
+        fs_samples = []
+        for vcf in sorted([f for f in path.glob(vcf_glob)]):
 
-                # class used after filtering with the classifiers to construct core genome,
-                # simply considers snps only regardless of variant caller (default)
+            # class used after filtering with the classifiers to construct core genome,
+            # simply considers snps only regardless of variant caller (default)
 
-                pysamstats = vcf.parent / f'{vcf.stem}.txt'
+            pysamstats = vcf.parent / f'{vcf.stem}.txt'
 
-                # Low coverage samples on nanopore induce many (100k +) low coverage regions
-                # which are later excluded in the SNP calls - to accommodate low
-                # coverage multiplex isolates, try:
-                #   - use only Snippy low coverage sites  <-- this is similar to low threshold
-                #   - use lower min_cov threshold  <-- this seems to work
-                #   - exclude low coverage isolates <-- prefer not to
+            # Low coverage samples on nanopore induce many (100k +) low coverage regions
+            # which are later excluded in the SNP calls - to accommodate low
+            # coverage multiplex isolates, try:
+            #   - use only Snippy low coverage sites  <-- this is similar to low threshold
+            #   - use lower min_cov threshold  <-- this seems to work
+            #   - exclude low coverage isolates <-- prefer not to
 
-                fs = pool.apply_async(
-                    ForestSample, args=(vcf, pysamstats, min_cov,),
-                    callback=lambda f: self.logger.info(f"Processed ONT sample: {f.name}")
-                )
-                fs_samples.append(fs)
-            
-        self.ont = [result.get() for result in fs_samples]
+            fs = ForestSample(vcf=vcf, pysamstats=pysamstats, min_cov=min_cov)
+            self.logger.info(f"Processed ONT sample: {fs.name}")
+            fs_samples.append(fs)
 
         for fs in self.ont:
             if fs.data is None:
