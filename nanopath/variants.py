@@ -141,7 +141,7 @@ class HybridCoreGenome:
             #   - use lower min_cov threshold  <-- this seems to work
             #   - exclude low coverage isolates <-- prefer not to
 
-            fs = ForestSample(vcf=vcf, pysamstats=pysamstats, min_cov=min_cov)
+            fs = ForestSample(vcf=vcf, stats=pysamstats, min_cov=min_cov)
             self.logger.info(f"Processed ONT sample: {fs.name}")
             fs_samples.append(fs)
 
