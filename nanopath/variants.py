@@ -237,6 +237,10 @@ class HybridCoreGenome:
             ignore_index=True, subset=['chromosome', 'position']
         )
 
+        if core_site_data.empty:
+            self.logger.info("No sites remaining. Exit.")
+            return
+
         core_site_table = core_site_data[
             ['chromosome', 'position', 'ref', 'alt']
         ].sort_values(['chromosome', 'position'])
