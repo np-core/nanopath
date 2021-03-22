@@ -1,8 +1,10 @@
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import math
+
 from matplotlib import pyplot as plt
-import collections
+from collections import Counter
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 from sklearn.ensemble import RandomForestClassifier
@@ -19,7 +21,6 @@ from pysam import VariantFile
 from nanopath.utils import PoreLogger, run_cmd
 from nanopath.processors import SnippySample, ClairSample, MedakaSample, ForestSample
 from pathlib import Path
-from multiprocessing import Pool
 
 basesN = ['A', 'C', 'G', 'T']
 perm = permutations(basesN, 2)
@@ -151,7 +152,7 @@ class HybridCoreGenome:
 
         self.ont = [fs for fs in fs_samples if fs.data is not None]
 
-    def call_hybrid_core(self, include_reference: bool = True):
+    def call_hybrid_core(self, include_reference: bool = True, allow_missing: float = 0.):
 
         """ Determine core variants from Snippy and Medaka samples  """
 
@@ -178,6 +179,24 @@ class HybridCoreGenome:
                 else:
                     snp_positions[chrom] = positions
 
+        # Insert step: get all excluded positions per sample, then
+        # check across how many samples each excluded position occurs
+        # and remove it from excluded sites if <= {allow_missing*n} samples
+        # have that site (e.g. reverse: include site in excluded if >
+        # 20% samples missing that site)
+
+        if allow_missing > 0:
+            allow_missing_n = math.floor(len(samples)*allow_missing)
+            snps_to_keep = {}
+            for chrom, excluded_sites in exclude.items():
+                snps_to_keep[chrom] = []
+                site_counts = Counter(excluded_sites)
+                for site, count in site_counts.items():
+                    if count <= allow_missing_n:
+                        snps_to_keep[chrom].append(site)
+        else:
+            snps_to_keep = {chrom: list() for chrom, _ in exclude.items()}
+
         # For each chromosomes, determine the sites to exclude across all samples
         # corresponding to called sites that fall into low coverage or gaps
         # in any sample (non core sites)
@@ -187,6 +206,11 @@ class HybridCoreGenome:
                 set(snp_positions[chrom]).intersection(
                     pd.Series(excluded_sites).unique().tolist()
                 )
+
+            # Remove sites that are meant to be kept because of allowed missingness
+            snps_to_exclude[chrom] = [
+                site for site in snps_to_exclude[chrom] if site not in snps_to_keep[chrom]
+            ]
 
         # For each chromosome, determine the unique sites across all samples
         # and check how many of them fall into non-core sites, then

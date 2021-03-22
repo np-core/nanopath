@@ -567,4 +567,4 @@ class BioSampler:
         else:
             print('Success!')
 
-        return response.text
+            return response.json()
