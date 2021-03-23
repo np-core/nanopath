@@ -272,7 +272,7 @@ def phybeast_prepare_metadata_file(
         raise ValueError('Could not find date and name in columns')
 
     df = _df[_df['name'].isin(sequence_names)]
-    
+
     print(f"Removed {len(df)-len(_df)} isolates without sequences in alignment")
 
     if prep == 'treetime':

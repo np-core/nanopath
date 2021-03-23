@@ -23,6 +23,6 @@ def prepare_metadata(meta_data, alignment, prep, output):
 
     """ Randomise the dates in a meta data file with columns: name, date """
 
-    phybeast_prepare_metadata_file(meta_file=meta_data, prep=prep, output_file=output)
+    phybeast_prepare_metadata_file(meta_file=meta_data, alignment=alignment, prep=prep, output_file=output)
 
 
