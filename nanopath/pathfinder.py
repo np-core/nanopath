@@ -273,7 +273,7 @@ def phybeast_prepare_metadata_file(
 
     df = _df[_df['name'].isin(sequence_names)]
 
-    print(f"Removed {len(df)-len(_df)} isolates without sequences in alignment")
+    print(f"Removed {len(_df)-len(df)} isolates without sequences in alignment")
 
     if prep == 'treetime':
         df.to_csv(output_file, header=True, sep=',', index=False)
