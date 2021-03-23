@@ -246,7 +246,6 @@ def phybeast_randomise_date_file(
 
 def phybeast_prepare_metadata_file(
     meta_file: Path,
-    alignment: Path,
     prep: str = 'lsd2',
     output_file: Path = Path.cwd() / 'lsd2.meta',
     na_range: bool = True,
@@ -263,17 +262,10 @@ def phybeast_prepare_metadata_file(
 
     """
 
-    _df = pandas.read_csv(meta_file, sep='\t')
+    df = pandas.read_csv(meta_file, sep='\t')
 
-    with alignment.open() as aln:
-        sequence_names = [line.strip().split()[0].replace('>', "") for line in aln if line.startswith(">")]
-
-    if 'date' not in _df.columns or 'name' not in _df.columns:
+    if 'date' not in df.columns or 'name' not in df.columns:
         raise ValueError('Could not find date and name in columns')
-
-    df = _df[_df['name'].isin(sequence_names)]
-
-    print(f"Removed {len(_df)-len(df)} isolates without sequences in alignment")
 
     if prep == 'treetime':
         df.to_csv(output_file, header=True, sep=',', index=False)
