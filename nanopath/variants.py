@@ -152,13 +152,16 @@ class HybridCoreGenome:
 
         self.ont = [fs for fs in fs_samples if fs.data is not None]
 
-    def call_hybrid_core(self, include_reference: bool = True, allow_missing: float = 0.):
+    def call_hybrid_core(self, include_reference: bool = True):
 
         """ Determine core variants from Snippy and Medaka samples  """
 
         # Merge samples from Snippy and ONT
 
         samples = self.snippy + self.ont
+
+        # TODO: see if this improves adding back some SNPs
+        allow_missing: float = 0.
 
         exclude = {}
         snp_positions = {}
