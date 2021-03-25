@@ -20,10 +20,13 @@ from collections import Counter
     "--column", "-c", type=str, help="Column to subset the data", default="cluster"
 )
 @click.option(
-    "--threshold", "-t", type=int, help="Coverage threshold", default=10
+    "--threshold1", "-t1", type=int, help="Coverage threshold 1", default=10
+)
+@click.option(
+    "--threshold2", "-t2", type=int, help="Coverage threshold 2", default=5
 )
 def plot_coverage_summary(
-    data, name, palette, column, threshold
+    data, name, palette, column, threshold1, threshold2
 ):
 
     """ Join two dataframes to add selected trait columns """
@@ -40,7 +43,8 @@ def plot_coverage_summary(
 
     sns.despine()
     sns.stripplot(y=column, x="mean_coverage", data=df, ax=ax, palette=palette, edgecolor='gray')
-    plt.axvline(x=threshold, ls="--", color="black")
+    plt.axvline(x=threshold1, ls="-", color="black")
+    plt.axvline(x=threshold2, ls="--", color="black")
 
     plt.tight_layout()
     plt.ylabel("Outbreak\n")

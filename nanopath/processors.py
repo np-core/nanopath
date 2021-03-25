@@ -233,8 +233,6 @@ class MegalodonCore:
                 self.logger.info(f'Found invariant site: {site_index}')
                 invariant_sites.append(site_index)
 
-            print(site_index, col.value_counts())
-
         self.logger.info(
             f'Removing {len(invariant_sites)} invariant sites from alignment'
         )

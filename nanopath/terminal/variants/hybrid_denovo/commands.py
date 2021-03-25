@@ -59,4 +59,4 @@ def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov, bre
     cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=break_complex)
     cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=min_cov)
 
-    cg.call_hybrid_core(allow_missing=allow_missing)
+    cg.call_hybrid_core()
