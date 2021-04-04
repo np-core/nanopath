@@ -58,8 +58,12 @@ from nanopath.utils import set_nested_item
     "--model_prior", "-pr", required=False, type=str, default=None, multiple=True,
     help="One or multiple args setting the replacement prior value in the YAML file with keys in string [:]"
 )
+@click.option(
+    "--tag", "-t", is_flag=True,
+    help="If modified on the fly attach the key path and setting to the output prefix [false]"
+)
 def xml_bdss(
-    alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions, model_prior
+    alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions, model_prior, tag
 ):
 
     """ Pre-configured Birth-Death Skyline Serial XML """
@@ -90,15 +94,12 @@ def xml_bdss(
 
         # Modify the model prior configs if settings are passed
 
-        print(model_priors)
-        
         for mp in model_prior:
             mp_nest = mp.split(":")
             mp_path, mp_val = mp_nest[:-1], mp_nest[-1]
-            print(mp_path, mp_val, mp_nest)
             model_priors = set_nested_item(model_priors, mp_path, mp_val)
-
-        print(model_priors)
+            if tag:
+                prefix += f"_{mp}"
 
         bdss.set_model_priors(prior_config=model_priors, distribution=True)
 
