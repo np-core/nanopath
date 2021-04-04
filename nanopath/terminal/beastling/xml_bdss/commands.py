@@ -55,7 +55,7 @@ from nanopath.beastling import BirthDeathSkylineSerial
     help="Outdir for XML files [$PWD/bdss]"
 )
 @click.option(
-    "--prior", "-pr", required=False, type=str, default=None,
+    "--prior", "-pr", required=False, type=str, default=None, multiple=True,
     help="One or multiple args setting the replacement prior value in the YAML file with keys in string [:]"
 )
 def xml_bdss(
