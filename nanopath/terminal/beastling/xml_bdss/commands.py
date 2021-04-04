@@ -3,6 +3,7 @@ import click
 from pathlib import Path
 from nanopath.beastling import BirthDeathSkylineSerial
 
+
 @click.command()
 @click.option(
     "--alignment", "-a", required=True, type=Path,
@@ -53,12 +54,20 @@ from nanopath.beastling import BirthDeathSkylineSerial
     "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
     help="Outdir for XML files [$PWD/bdss]"
 )
-def xml_bdss(alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions):
+@click.option(
+    "--prior", "-pr", required=False, type=str, default=None,
+    help="One or multiple args setting the replacement prior value in the YAML file with keys in string [:]"
+)
+def xml_bdss(
+    alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions, prior
+):
 
     """ Pre-configured Birth-Death Skyline Serial XML """
 
     yaml_files = {prefix: yaml}
     outdir.mkdir(parents=True, exist_ok=True)
+
+    print(prior)
 
     for prefix, y in yaml_files.items():
 

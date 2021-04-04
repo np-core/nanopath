@@ -1086,6 +1086,11 @@ class RandomForestFilter(PoreLogger):
         return features, sample_features
 
 
+"""
+Code adapated by Sanderson et al. (2020)
+"""
+
+
 class ForestClassifier:
     def __init__(
         self, vcf: Path = None, stats: Path = None, output: Path = None, model_file: Path = None,
