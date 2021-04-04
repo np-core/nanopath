@@ -4,10 +4,11 @@ import logging
 import pyfastx
 import random
 import jinja2
-
 import sys
 
 from pathlib import Path
+from functools import reduce
+from operator import getitem
 
 
 class PoreLogger:
@@ -301,3 +302,9 @@ def smart_open(filename: str or Path = None, mode: str = "w"):
         fh = sys.stdout
 
     return fh
+
+
+def set_nested_item(data_dict: dict, key_list: tuple or list, value):
+    """Set item in nested dictionary"""
+    reduce(getitem, key_list[:-1], data_dict)[key_list[-1]] = value
+    return data_dict

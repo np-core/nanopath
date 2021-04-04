@@ -2,7 +2,7 @@ import click
 
 from pathlib import Path
 from nanopath.beastling import BirthDeathSkylineSerial
-
+from nanopath.utils import set_nested_item
 
 @click.command()
 @click.option(
@@ -55,19 +55,17 @@ from nanopath.beastling import BirthDeathSkylineSerial
     help="Outdir for XML files [$PWD/bdss]"
 )
 @click.option(
-    "--prior", "-pr", required=False, type=str, default=None, multiple=True,
+    "--model_prior", "-pr", required=False, type=str, default=None, multiple=True,
     help="One or multiple args setting the replacement prior value in the YAML file with keys in string [:]"
 )
 def xml_bdss(
-    alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions, prior
+    alignment, data, yaml, clock, mcmc, length, hot, outdir, intervals, prefix, sample_prior, dimensions, model_prior
 ):
 
     """ Pre-configured Birth-Death Skyline Serial XML """
 
     yaml_files = {prefix: yaml}
     outdir.mkdir(parents=True, exist_ok=True)
-
-    print(prior)
 
     for prefix, y in yaml_files.items():
 
@@ -89,6 +87,19 @@ def xml_bdss(
 
         # Set model prior configuration
         model_priors = config.get('priors').get('model')
+
+        # Modify the model prior configs if settings are passed
+
+        print(model_priors)
+        
+        for mp in model_prior:
+            mp_nest = mp.split(":")
+            mp_path, mp_val = mp_nest[:-1], mp_nest[-1]
+            print(mp_path, mp_val, mp_nest)
+            model_priors = set_nested_item(model_priors, mp_path, mp_val)
+
+        print(model_priors)
+
         bdss.set_model_priors(prior_config=model_priors, distribution=True)
 
         # Set clock prior configuration
