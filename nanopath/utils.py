@@ -318,3 +318,5 @@ def modify_model_priors(model_priors, model_prior, tag, prefix):
         model_priors = set_nested_item(model_priors, mp_path, mp_val)
         if tag:
             prefix += f"_{mp}"
+
+    return model_priors
