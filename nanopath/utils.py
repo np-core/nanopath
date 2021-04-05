@@ -308,3 +308,13 @@ def set_nested_item(data_dict: dict, key_list: tuple or list, value):
     """Set item in nested dictionary"""
     reduce(getitem, key_list[:-1], data_dict)[key_list[-1]] = value
     return data_dict
+
+
+def modify_model_priors(model_priors, model_prior, tag, prefix):
+
+    for mp in model_prior:
+        mp_nest = mp.split(":")
+        mp_path, mp_val = mp_nest[:-1], mp_nest[-1]
+        model_priors = set_nested_item(model_priors, mp_path, mp_val)
+        if tag:
+            prefix += f"_{mp}"

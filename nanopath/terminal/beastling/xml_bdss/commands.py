@@ -2,7 +2,7 @@ import click
 
 from pathlib import Path
 from nanopath.beastling import BirthDeathSkylineSerial
-from nanopath.utils import set_nested_item
+from nanopath.utils import modify_model_priors
 
 @click.command()
 @click.option(
@@ -94,12 +94,8 @@ def xml_bdss(
 
         # Modify the model prior configs if settings are passed
 
-        for mp in model_prior:
-            mp_nest = mp.split(":")
-            mp_path, mp_val = mp_nest[:-1], mp_nest[-1]
-            model_priors = set_nested_item(model_priors, mp_path, mp_val)
-            if tag:
-                prefix += f"_{mp}"
+        if model_prior:
+            model_priors = modify_model_priors(model_priors, model_prior, tag, prefix)
 
         bdss.set_model_priors(prior_config=model_priors, distribution=True)
 

@@ -2,7 +2,7 @@ import click
 
 from pathlib import Path
 from nanopath.beastling import BirthDeathSkylineContemporary
-
+from nanopath.utils import modify_model_priors
 
 @click.command()
 @click.option(
@@ -57,7 +57,15 @@ from nanopath.beastling import BirthDeathSkylineContemporary
     "--outdir", "-o", required=False, type=Path, default=Path('bdss'),
     help="Outdir for XML files [$PWD/bdss]"
 )
-def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, intervals, prefix, sample_prior):
+@click.option(
+    "--model_prior", "-pr", required=False, type=str, default=None, multiple=True,
+    help="One or multiple args setting the replacement prior value in the YAML file with keys in string [:]"
+)
+@click.option(
+    "--tag", "-t", is_flag=True,
+    help="If modified on the fly attach the key path and setting to the output prefix [false]"
+)
+def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, length, hot, intervals, prefix, sample_prior, model_prior, tag):
 
     """ Pre-configured Birth-Death Skyline Contemporary XML """
 
@@ -88,6 +96,10 @@ def xml_bdsc(alignment, data, outdir, yaml, yaml_dir, yaml_glob, clock, mcmc, le
 
         # Set model prior configuration
         model_priors = config.get('priors').get('model')
+        # Modify the model prior configs if settings are passed
+        if model_prior:
+            model_priors = modify_model_priors(model_priors, model_prior, tag, prefix)
+
         bdsc.set_model_priors(prior_config=model_priors, distribution=True)
 
         # Set clock prior configuration
