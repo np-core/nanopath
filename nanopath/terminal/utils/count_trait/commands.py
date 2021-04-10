@@ -8,19 +8,21 @@ from pathlib import Path
     '--data',
     '-d',
     type=Path,
+    required=True,
     help='Data with columns: name,trait1,trait2 ...'
+)
+@click.option(
+    '--trait',
+    '-r',
+    type=str,
+    required=True,
+    help='Trait column in data to count values for'
 )
 @click.option(
     '--alignment',
     '-a',
     type=Path,
     help='Path to alignment file to subset data with names'
-)
-@click.option(
-    '--trait',
-    '-r',
-    type=str,
-    help='Trait column in data to count values for'
 )
 def count_trait(data, alignment, trait):
 
@@ -32,7 +34,7 @@ def count_trait(data, alignment, trait):
         print(df[trait].value_counts())
     else:
         with alignment.open('r') as aln:
-            names = [line.strip().split().replace(">", "") for line in aln if line.startswith(">")]
+            names = [line.strip().split()[0].replace(">", "") for line in aln if line.startswith(">")]
 
         df = df[df['name'].isin(names)]
 
