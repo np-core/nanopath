@@ -100,6 +100,23 @@ get_hpd_title <- function(data, prefix='Origin', dig=3, science=FALSE, suffix=""
     return(title)
 }
 
+get_hpd <- function(data, dig=9, science=FALSE){
+
+    hpd <- getHPD(data)
+
+    if (science){
+        lower <- scales::scientific(hpd[1])
+        median <-  scales::scientific(hpd[2])
+        upper <- scales::scientific(hpd[3])
+    } else {
+        lower <- round(hpd[1], dig)
+        median <-  round(hpd[2], dig)
+        upper <- round(hpd[3], dig)
+    }
+
+    return(c(lower, median, upper))
+}
+
 plot_single_log <- function(posterior_data, reproduction_number_skyline, oldest, plot_path, plot_name, name=NULL, hpds=NULL){
 
 
@@ -243,7 +260,7 @@ plot_posterior_single <- function(log_file, oldest, most_recent, burnin=0.1, hpd
     }
 
     results <- process_log(
-        log_file=log_file, burnin=burnin, hpd=hpd, sample_slice=sampel_slice,
+        log_file=log_file, burnin=burnin, hpd=hpd, sample_slice=sample_slice,
         most_recent=most_recent, contemporary=contemporary
     )
 
@@ -358,8 +375,22 @@ read_log_files <- function(
         "meta"=df3
     )
 
-    return(results)
+    write.csv(df1, "posterior.tsv", sep="\t", quote=FALSE)
+    write.csv(df2, "re_hpd.tsv", sep="\t", quote=FALSE)
+    write.csv(df3, "meta.tsv", sep="\t", quote=FALSE)
 
+    drops <- c("run_name")
+    df1 <- df1[ , !(names(df1) %in% drops)]
+
+    hpds <- lapply(df1, get_hpd)
+
+    hpd_data <- data.frame(hpds)
+    rownames(hpd_data) <- c("lower", "median", "upper")
+
+    hpd_data <- t(hpd_data)
+    write.csv(hpd_data, "hpd.tsv", sep="\t", quote=FALSE)
+
+    return(results)
 
 }
 
@@ -607,7 +638,12 @@ plot_prior_sensitivity <- function(
             plot_path=plot_path,
             plot_name=run
         )
+
+
     }
+
+
+
 }
 
 
