@@ -72,6 +72,8 @@ def plot_variant_violins(
         palettes=[s.strip() for s in palettes.split(',')]
     )
 
+    print(attr)
+
     if variables == "default":
         varis = [
             ["accuracy", "precision", "recall"],
