@@ -1732,7 +1732,7 @@ class MasterParser:
         ]
 
         self.nanoq_columns = [
-            'reads', 'bp', 'longest', 'shortest', 'mean_length',
+            'reads', 'bp', 'n50', 'longest', 'shortest', 'mean_length',
             'median_length', 'mean_qscore', 'median_qscore'
         ]
 

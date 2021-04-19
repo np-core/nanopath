@@ -55,7 +55,7 @@ def collect(path, exclude, exclude_genotype, outdir, illumina):
 
     ont = ap.collect_genotypes(component='ont', exclude=exclude_genotype)
     nanoq = ap.collect_statistics(mode="")
-    
+
     if illumina:
         ref = ap.collect_genotypes(component='illumina', exclude=exclude_genotype)
         hybrid = ap.collect_genotypes(component='hybrid', exclude=exclude_genotype)
