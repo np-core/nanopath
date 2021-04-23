@@ -481,7 +481,7 @@ class Survey:
         if isinstance(study, str):
             return f'"study_accession={study}"'
         else:
-            return " OR ".join(
+            return "%20OR%20".join(
                 f'study_accession={s}' for s in study
             )
 
@@ -490,7 +490,7 @@ class Survey:
         if isinstance(sample, str):
             return f'"run_accession={sample}"'
         else:
-            return " OR ".join(
+            return "%20OR%20".join(
                 f'run_accession={s}' for s in sample
             )
 
