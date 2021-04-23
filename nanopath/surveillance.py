@@ -170,8 +170,8 @@ class Survey:
                 "library_layout,library_source,library_strategy," \
                 "location,country,collection_date"
 
-        self.url = f"https://www.ebi.ac.uk/ena/portal/api/search?result=read_run" \
-                   f"&fields={self.fields}&query='"
+        self.url = f'https://www.ebi.ac.uk/ena/portal/api/search?result=read_run' \
+                   f'&fields={self.fields}&query="'
 
         self.term_chunk_size = 200  # REST API limited by 6000 characters
 
@@ -295,8 +295,9 @@ class Survey:
         for i, t in enumerate(terms):
             print(f'Submitting query: {i}')
             url = self.url + t
+            url = url + '"'
             print(url)
-            df = self._query(url+"'")
+            df = self._query(url)
 
             query_results = self._sanitize_ena_query(
                 df, url, submitted_fastq=submitted_fastq,
