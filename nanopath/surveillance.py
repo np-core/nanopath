@@ -570,5 +570,7 @@ class BioSampler:
             print(f'Other error occurred: {err}')  # Python 3.6
         else:
             print('Success!')
-
+            print(url)
+            print(response)
+            print(response.text())
             return response.json()
