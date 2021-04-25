@@ -560,7 +560,9 @@ class BioSampler:
     def query_url(self, query: str = ""):
 
         try:
-            response = requests.get(self.url + f"{query}")
+            url = self.url + f"{query}"
+            url = url.replace(" ", "%20")
+            response = requests.get(url)
             response.raise_for_status()
         except requests.exceptions.HTTPError as http_err:
             print(f'HTTP error occurred: {http_err}')  # Python 3.6
@@ -568,7 +570,5 @@ class BioSampler:
             print(f'Other error occurred: {err}')  # Python 3.6
         else:
             print('Success!')
-            print(self.url + f"{query}")
-            print(response)
-            
+
             return response.json()
