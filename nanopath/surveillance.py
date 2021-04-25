@@ -572,5 +572,5 @@ class BioSampler:
             print('Success!')
             print(url)
             print(response)
-            print(response.text())
+            print(response.text)
             return response.json()
