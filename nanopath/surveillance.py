@@ -296,6 +296,7 @@ class Survey:
             print(f'Submitting query: {i}')
             url = self.url + t
             url = url + '"'
+            url = url.replace(" ", "%20")
             print(url)
             df = self._query(url)
 
@@ -463,9 +464,9 @@ class Survey:
         if species:
             q += f'tax_name("{species}")'
         if platform:
-            q += f'AND instrument_platform={platform}'
+            q += f' AND instrument_platform={platform}'
         if platform:
-            q += f'AND library_layout={layout}'
+            q += f' AND library_layout={layout}'
         if source:
             q += f' AND library_source={source}'
         if strategy:
