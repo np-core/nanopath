@@ -14,7 +14,7 @@ from nanopath.surveillance import BioSampler
     help='Output response from run queries [run_query.tsv]'
 )
 @click.option(
-    '--query_column',  type=str, required=False, default="sample",
+    '--query_column',  type=str, required=False, default="sample_accession",
     help='Column in data containing accessions to query'
 )
 def query(file, output, query_column):
