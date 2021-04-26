@@ -314,7 +314,7 @@ class HybridCoreGenome:
                 if len(seq_concat) != ref_length:
                     self.logger.info(f"Failed to replace SNPs in isolate: {sample.name}")
                     self.logger.info(f"Length of replacement sequence is: {len(seq_concat)} bp")
-                    self.logger.info(f"This may be caused by no SNPs typed on one of multiple chromosomes.")
+                    self.logger.info(f"This may be caused by 0 SNPs typed on one of multiple chromosomes")
                     self.logger.info(f"GitHub Issue #17 [Multiple chromosome fixes]")
                     excluded += 1
                 else:
