@@ -110,6 +110,9 @@ class HybridCoreGenome:
 
     def parse_snippy_vcf(self, path: Path, vcf_glob: str = "*.vcf", break_complex: bool = False):
 
+        total = 0
+        total_rejected = 0
+
         # min cov already done in snippy calls,
         # using aligned (gapped, mincoved) seq file
         for vcf in sorted([
@@ -123,7 +126,17 @@ class HybridCoreGenome:
             self.logger.info(
                 f'Processed {len(ss.data)} SNPs in sample: {ss.name}'
             )
-            self.snippy.append(ss)
+
+            if ss.parsed_status:
+                self.snippy.append(ss)
+            else:
+                self.logger.info(f"Reject sample: {vcf.stem}")
+
+                total_rejected += 1
+
+            total += 1
+            
+        self.logger.info("Total samples rejected from alignment: {total_rejected} / {total}")
 
     def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf"):
 

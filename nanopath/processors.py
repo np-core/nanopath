@@ -785,7 +785,8 @@ class SnippySample(Sample):
             self.excluded_positions: dict = self.get_excluded_positions()
 
         self.logger.debug(f'Processing Snippy variant calls: {self.vcf}')
-        self.parse()
+
+        self.parsed_status = self.parse()
 
         if break_complex:
             self.logger.debug(f'Breaking COMPLEX variants (excludes INDEL): {self.vcf}')
@@ -845,7 +846,7 @@ class SnippySample(Sample):
         return pandas.concat([noncomplex_variants, complex_broken])\
             .sort_values(['chromosome', 'position'])
 
-    def parse(self):
+    def parse(self) -> bool:
 
         var = 0
         total = 0
@@ -904,7 +905,9 @@ class SnippySample(Sample):
             )
         except KeyError:
             self.logger.info(f"VCF: {self.vcf} did not contain variants")
-            raise
+            return False
+
+        return True
 
     def get_excluded_positions(self):
 
