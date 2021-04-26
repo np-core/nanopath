@@ -112,6 +112,7 @@ class HybridCoreGenome:
 
         total = 0
         total_rejected = 0
+        failed = Path.cwd() / 'failed.tsv'
 
         # min cov already done in snippy calls,
         # using aligned (gapped, mincoved) seq file
@@ -131,7 +132,8 @@ class HybridCoreGenome:
                 self.snippy.append(ss)
             else:
                 self.logger.info(f"Reject sample: {vcf.stem}")
-
+                with failed.open("a") as fout:
+                    fout.write(f"{vcf.stem}\n")
                 total_rejected += 1
 
             total += 1
@@ -168,6 +170,8 @@ class HybridCoreGenome:
     def call_hybrid_core(self, include_reference: bool = True, keep_all: bool = False):
 
         """ Determine core variants from Snippy and Medaka samples  """
+
+        failed = Path.cwd() / 'failed.tsv'
 
         # Merge samples from Snippy and ONT
 
@@ -317,6 +321,9 @@ class HybridCoreGenome:
                     self.logger.info(f"This may be caused by 0 SNPs typed on one of multiple chromosomes")
                     self.logger.info(f"GitHub Issue #17 [Multiple chromosome fixes]")
                     excluded += 1
+
+                    with failed.open("a") as fout:
+                        fout.write(f"{sample.name}\n")
                 else:
                     full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
                 total += 1
@@ -346,7 +353,6 @@ class HybridCoreGenome:
         self.logger.info(
             f'Final single nucleotide polymorphisms in alignment: {snp_count}'
         )
-
 
 
 class RandomForestFilter(PoreLogger):
