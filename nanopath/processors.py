@@ -788,15 +788,16 @@ class SnippySample(Sample):
 
         self.parsed_status = self.parse()
 
-        if break_complex:
-            self.logger.debug(f'Breaking COMPLEX variants (excludes INDEL): {self.vcf}')
-            self.data = self.break_complex()
-        else:
-            self.logger.debug(
-                f'Not breaking COMPLEX variants (excludes COMPLEX, MNP, INDEL) '
-                f'retaining SNPs only: {self.vcf}'
-            )
-            self.data = self.data[self.data['snp'] == True]
+        if self.parsed_status:
+            if break_complex:
+                self.logger.debug(f'Breaking COMPLEX variants (excludes INDEL): {self.vcf}')
+                self.data = self.break_complex()
+            else:
+                self.logger.debug(
+                    f'Not breaking COMPLEX variants (excludes COMPLEX, MNP, INDEL) '
+                    f'retaining SNPs only: {self.vcf}'
+                )
+                self.data = self.data[self.data['snp'] == True]
 
     def break_complex(self):
 

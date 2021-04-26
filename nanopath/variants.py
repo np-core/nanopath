@@ -135,7 +135,7 @@ class HybridCoreGenome:
                 total_rejected += 1
 
             total += 1
-            
+
         self.logger.info("Total samples rejected from alignment: {total_rejected} / {total}")
 
     def parse_ont_vcf(self, path: Path, min_cov: int = -1, vcf_glob: str = "*.vcf"):
