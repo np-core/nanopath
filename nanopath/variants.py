@@ -296,6 +296,7 @@ class HybridCoreGenome:
 
         # Read the reference sequence used for alignment
         ref = read_fasta(self.reference)
+        ref_length = sum([len(v) for v in ref.values()])
 
         # For each sample insert the called variant / reference allele
         # into the reference sequence, concatenate chromosomes and write
@@ -305,11 +306,20 @@ class HybridCoreGenome:
             f'Writing full core variant alignment to: {self.prefix}.full.aln'
         )
 
+        total = 0
+        excluded = 0
         with open(f'{self.prefix}.full.aln', 'w') as full_alignment:
             for sample in samples:
                 seq_concat = sample.replace_variants(reference=ref)
-                print(len(seq_concat))
-                full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
+                if len(seq_concat) != ref_length:
+                    self.logger.info(f"Failed to replace SNPs in isolate: {sample.name}")
+                    self.logger.info(f"Length of replacement sequence is: {len(seq_concat)} bp")
+                    self.logger.info(f"This may be caused by no SNPs typed on one of multiple chromosomes.")
+                    self.logger.info(f"GitHub Issue #17 [Multiple chromosome fixes]")
+                    excluded += 1
+                else:
+                    full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
+                total += 1
 
             if include_reference:
                 ref_seq = ''.join(ref[key]for key in sorted(ref.keys()))
