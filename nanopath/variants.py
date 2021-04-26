@@ -308,6 +308,7 @@ class HybridCoreGenome:
         with open(f'{self.prefix}.full.aln', 'w') as full_alignment:
             for sample in samples:
                 seq_concat = sample.replace_variants(reference=ref)
+                print(len(seq_concat))
                 full_alignment.write(f'>{sample.name}\n{seq_concat}\n')
 
             if include_reference:
