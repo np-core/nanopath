@@ -165,7 +165,7 @@ class HybridCoreGenome:
 
         self.ont = [fs for fs in fs_samples if fs.data is not None]
 
-    def call_hybrid_core(self, include_reference: bool = True):
+    def call_hybrid_core(self, include_reference: bool = True, keep_all: bool = False):
 
         """ Determine core variants from Snippy and Medaka samples  """
 
@@ -217,16 +217,18 @@ class HybridCoreGenome:
         # corresponding to called sites that fall into low coverage or gaps
         # in any sample (non core sites)
         snps_to_exclude = {}
-        for chrom, excluded_sites in exclude.items():
-            snps_to_exclude[chrom] = \
-                set(snp_positions[chrom]).intersection(
-                    pd.Series(excluded_sites).unique().tolist()
-                )
 
-            # Remove sites that are meant to be kept because of allowed missingness
-            snps_to_exclude[chrom] = [
-                site for site in snps_to_exclude[chrom] if site not in snps_to_keep[chrom]
-            ]
+        if not keep_all:
+            for chrom, excluded_sites in exclude.items():
+                snps_to_exclude[chrom] = \
+                    set(snp_positions[chrom]).intersection(
+                        pd.Series(excluded_sites).unique().tolist()
+                    )
+
+                # Remove sites that are meant to be kept because of allowed missingness
+                snps_to_exclude[chrom] = [
+                    site for site in snps_to_exclude[chrom] if site not in snps_to_keep[chrom]
+                ]
 
         # For each chromosome, determine the unique sites across all samples
         # and check how many of them fall into non-core sites, then
@@ -261,9 +263,14 @@ class HybridCoreGenome:
         for sample in samples:
             filtered = []
             for chrom, data in sample.data.groupby('chromosome'):
-                filtered.append(
-                    data[data['position'].isin(core_sites[chrom])]
-                )
+
+                try:
+                    chrom_core = data[data['position'].isin(core_sites[chrom])]
+                except KeyError:
+                    chrom_core = data
+
+                filtered.append(chrom_core)
+
             sample.data_core = pd.concat(filtered)
             all_core_data.append(sample.data_core)
 

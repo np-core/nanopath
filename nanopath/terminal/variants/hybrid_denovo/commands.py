@@ -47,16 +47,26 @@ from nanopath.variants import HybridCoreGenome
     help='Break complex variant types in Snippy (MNP, COMPLEX) and include in core alignment'
 )
 @click.option(
+    '--keep_all',
+    is_flag=True,
+    help='Do not exclude any SNPs based on gaps in reference regions from .aligned.fa (non-core sites) [false]'
+)
+@click.option(
+    '--include_reference',
+    is_flag=True,
+    help='Include reference in final alignment [false]'
+)
+@click.option(
     '--prefix',
     type=str,
     default="core",
     help='Prefix for output alignment and VCF'
 )
-def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov, break_complex, allow_missing):
+def hybrid_denovo(vcf_snippy, vcf_ont, vcf_glob, reference, prefix, min_cov, break_complex, allow_missing, include_reference, keep_all):
 
     cg = HybridCoreGenome(prefix=prefix, reference=reference)
 
     cg.parse_snippy_vcf(path=vcf_snippy, vcf_glob=vcf_glob, break_complex=break_complex)
     cg.parse_ont_vcf(path=vcf_ont, vcf_glob=vcf_glob, min_cov=min_cov)
 
-    cg.call_hybrid_core()
+    cg.call_hybrid_core(include_reference=include_reference, keep_all=keep_all)
