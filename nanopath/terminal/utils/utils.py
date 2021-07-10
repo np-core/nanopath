@@ -23,6 +23,7 @@ from .prepare_metadata import prepare_metadata
 from .remove_invariant import remove_invariant
 from .rename_header import rename_header
 from .print_header import print_header
+from .plot_multi_abundance import plot_multi_abundance
 
 VERSION = "1"
 
@@ -34,6 +35,7 @@ def utils():
     pass
 
 
+utils.add_command(plot_multi_abundance)
 utils.add_command(count_trait)
 utils.add_command(plot_assembly_dnadiff)
 utils.add_command(get_fast5)
