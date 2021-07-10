@@ -13,9 +13,7 @@ name="alignment">
 
 
     
-
-
-    
+<map name="prior" >beast.math.distributions.Prior</map>
 <map name="Uniform" >beast.math.distributions.Uniform</map>
 <map name="Exponential" >beast.math.distributions.Exponential</map>
 <map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
@@ -23,7 +21,6 @@ name="alignment">
 <map name="Beta" >beast.math.distributions.Beta</map>
 <map name="Gamma" >beast.math.distributions.Gamma</map>
 <map name="LaplaceDistribution" >beast.math.distributions.LaplaceDistribution</map>
-<map name="prior" >beast.math.distributions.Prior</map>
 <map name="InverseGamma" >beast.math.distributions.InverseGamma</map>
 <map name="OneOnX" >beast.math.distributions.OneOnX</map>
 
