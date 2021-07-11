@@ -28,10 +28,15 @@ def plot_multi_abundance(
 
     data = pandas.read_csv(bracken_combined, sep='\t', index_col='name', header=0)
 
-    print(data)
+    print(data.name.tolist())
 
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
+
+    # plot grid behind markers
+    plt.grid(ls="--", zorder=1)
+    # take care of long labels
+    fig.autofmt_xdate()
 
     plt.tight_layout()
     plt.ylabel("Count\n")
