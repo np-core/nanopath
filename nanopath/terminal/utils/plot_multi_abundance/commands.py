@@ -130,7 +130,7 @@ def plot_multi_abundance(
     panel2_melt = panel2_melt.sort_values(['sample', 'domain', 'taxon'], ascending=False)
     p1 = sns.scatterplot(
         data=panel1_melt, x="sample", y="taxon", hue="domain",
-        hue_order=['Pathogens', 'Viruses', 'Human', 'Contamination'],
+        hue_order=['Contamination', 'Human', 'Viruses', 'Pathogens'],
         size="abundance", legend=False, sizes=(70, 2000), ax=ax[0]
     )
 
