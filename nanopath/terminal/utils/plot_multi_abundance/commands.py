@@ -114,11 +114,16 @@ def plot_multi_abundance(
     panel2.reset_index(level=0, inplace=True)
     panel1.rename(columns={'index': 'Taxon'}, inplace=True)
     panel2.rename(columns={'index': 'Taxon'}, inplace=True)
-    
+
     print(panel1)
     print(panel2)
     #
-    # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
+    panel1_melt = panel1.melt(id_vars=['Taxon', 'domain'], value_name="abundance", var_name="sample")
+    panel2_melt = panel2.melt(id_vars=['Taxon', 'domain'], value_name="abundance", var_name="sample")
+
+
+    print(panel1_melt)
+    print(panel2_melt)
     #
     # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", hue="domain",
     # size="pop", legend=False, sizes=(20, 2000), ax=ax)
