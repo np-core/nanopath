@@ -76,7 +76,7 @@ def plot_loci_cov(
                 p.set_title(f"{snp[0]} @ {snp[2]}")
                 p.axvline(x=int(snp[1]), color='r')
                 console.print(
-                    f"{snps[0]:<20}@{snps[2]:<8}@{snps[1]:<20}  A1: {snps[3]:<5} Odds: {snps[5]:<7}"
+                    f"{snp[0]:<20}@{snp[2]:<8}@{snp[1]:<20}  A1: {snp[3]:<5} Odds: {snp[5]:<7}"
                 )
 
                 if pile is not None:
