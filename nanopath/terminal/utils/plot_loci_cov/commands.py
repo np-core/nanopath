@@ -33,13 +33,18 @@ def plot_loci_cov(
         )
     )
 
-    for locus in cov_files:
-        coverage = pandas.read_csv(locus, sep="\t", header=None, names=["locus", 'position', 'coverage'])
-        if tail_length > 0:
-            coverage = coverage.iloc[tail_length:len(coverage)-tail_length]
-        print(coverage)
-        sns.lineplot(x=coverage.position, y=coverage.coverage, ax=ax)
-        plt.title(locus.stem)
+    fidx = 0
+    for i in range(nrow):
+        for c in range(ncol):
+            locus_cov = cov_files[fidx]
+            coverage = pandas.read_csv(locus_cov, sep="\t", header=None, names=["locus", 'position', 'coverage'])
+            if tail_length > 0:
+                coverage = coverage.iloc[tail_length:len(coverage) - tail_length]
+            print(coverage)
+            sns.lineplot(x=coverage.position, y=coverage.coverage, ax=ax)
+            plt.title(locus_cov.stem)
+            fidx += 1
+    
 
     plt.tight_layout()
     plt.ylabel("Coverage\n")
