@@ -3,7 +3,7 @@ import pandas
 from pathlib import Path
 from matplotlib import pyplot as plt
 import seaborn as sns
-from rich import Console
+from rich.console import Console
 
 @click.command()
 @click.option(
