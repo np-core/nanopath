@@ -3,6 +3,8 @@ import pandas
 from pathlib import Path
 from matplotlib import pyplot as plt
 import seaborn as sns
+import fnmatch
+
 
 PATHOGENS = [
     'Burkholderia pseudomallei',
@@ -77,7 +79,7 @@ def plot_multi_abundance(
 
     print(data)
 
-    collapse_taxa(viruses, by_name_until="virus")
+    collapse_taxa(viruses, glob="*virus")
 
 
     data.reset_index(level=0, inplace=True)
@@ -99,3 +101,9 @@ def plot_multi_abundance(
 
     fig.savefig(f'{plot_file}')
 
+def collapse_taxa(df, glob: str = None):
+    """ Taxa names to collapse are in index of DataFrame """
+
+    if glob is not None:
+        for name in df.index.tolist():
+            print(fnmatch.fnmatch(name, glob))
