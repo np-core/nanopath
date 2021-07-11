@@ -61,7 +61,7 @@ def plot_loci_cov(
             if snps is not None:
                 chrom_contig = '_'.join(locus_cov.stem.split("_")[0:2])  # must be chromosome contig name NC_
                 print(snps['chr'], chrom_contig)
-                snp = snps[snps['chr'] == chrom_contig].values
+                snp = snps[snps['chr'] == chrom_contig].values[0]
                 print(snp)
                 p.set_title(f"{snp[0]} @ {snp[2]}")
                 p.axvline(x=int(snp[1]), color='r')
