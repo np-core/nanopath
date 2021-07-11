@@ -14,7 +14,7 @@ import seaborn as sns
     help="Plot output file [multi_locus_coverage.pdf]"
 )
 @click.option(
-    "--tail_length", "-t", type=int, default=5000,
+    "--tail_length", "-t", type=int, default=0,
     help="Additional side sequence coverag added in samtools depth step at each side of target seq [5000 bp]"
 )
 def plot_loci_cov(
