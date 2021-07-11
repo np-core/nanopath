@@ -64,7 +64,8 @@ def plot_loci_cov(
                 snp = snps[snps['chr'] == chrom_contig].values[0]
                 print(snp)
                 p.set_title(f"{snp[0]} @ {snp[2]}")
-                p.axvline(x=int(snp[1]), color='r')
+                if not bar:
+                    p.axvline(x=int(snp[1]), color='r')
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
