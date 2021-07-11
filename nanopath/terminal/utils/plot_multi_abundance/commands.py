@@ -79,7 +79,7 @@ def plot_multi_abundance(
 
     print(data)
 
-    collapse_taxa(viruses, glob="*virus*")
+    collapse_taxa(viruses, suffix="virus")
 
 
     data.reset_index(level=0, inplace=True)
@@ -101,9 +101,10 @@ def plot_multi_abundance(
 
     fig.savefig(f'{plot_file}')
 
-def collapse_taxa(df, glob: str = None):
+def collapse_taxa(df, suffix: str = None):
     """ Taxa names to collapse are in index of DataFrame """
 
-    if glob is not None:
+    if suffix is not None:
         for name in df.index.tolist():
-            print(fnmatch.fnmatch(name.lower(), glob))
+            if suffix in name:
+                print(name.split(suffix)[0] + 'virus')
