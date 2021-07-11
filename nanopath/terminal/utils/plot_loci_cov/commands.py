@@ -79,7 +79,7 @@ def plot_loci_cov(
                 if pile is not None:
                     snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values[0]
                     console.print(
-                        f"{snp[0]:<20} {snp[2]:<8} {snp[1]:<20}  A1: {snp[3]:<5} Odds: {round(snp[5], 4):<7} "
+                        f"{snp[0]:<20} {snp[2]:<8} A1: {snp[3]:<5}  A2: {snp[4]:<5} Odds: {round(snp[5], 4):<7} "
                         f"Called: {snp_pile[-2]:<10} Coverage: {snp_pile[-1]:<10}"
                     )
             else:
