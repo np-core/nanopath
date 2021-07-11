@@ -126,6 +126,8 @@ def plot_multi_abundance(
     print(panel1_melt)
     print(panel2_melt)
 
+    panel1_melt['abundance'] = [None if ab == 0. else ab for ab in panel1_melt['abundance']]
+    panel2_melt['abundance'] = [None if ab == 0. else ab for ab in panel2_melt['abundance']]
     p1 = sns.scatterplot(
         data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(50, 2000), ax=ax[0]
     )
@@ -141,9 +143,10 @@ def plot_multi_abundance(
     fig.autofmt_xdate()
 
     plt.tight_layout()
-    plt.ylabel("")
-    plt.xlabel("")
-
+    p1.set_ylab("")
+    p1.set_xlab("")
+    p2.set_ylab("")
+    p2.set_xlab("")
     fig.savefig(f'{plot_file}')
 
 
