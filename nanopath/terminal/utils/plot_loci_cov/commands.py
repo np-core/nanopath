@@ -75,13 +75,13 @@ def plot_loci_cov(
                 snp = snps[snps['chr'] == chrom_contig].values[0]
                 p.set_title(f"{snp[0]} @ {snp[2]}")
                 p.axvline(x=int(snp[1]), color='r')
-                console.print(
-                    f"{snp[0]:<20} {snp[2]:<8} {snp[1]:<20}  A1: {snp[3]:<5} Odds: {snp[5]:<7}"
-                )
 
                 if pile is not None:
-                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values
-                    print(snp_pile)
+                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values[0]
+                    console.print(
+                        f"{snp[0]:<20} {snp[2]:<8} {snp[1]:<20}  A1: {snp[3]:<5} Odds: {snp[5]:<7} "
+                        f"Called: {snp_pile[-2]:<10} Coverage: {snp_pile[-1]:<10}"
+                    )
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
