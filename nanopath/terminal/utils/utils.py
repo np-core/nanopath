@@ -36,7 +36,7 @@ def utils():
     pass
 
 
-utils.add_coomad(plot_loci_cov)
+utils.add_command(plot_loci_cov)
 utils.add_command(plot_multi_abundance)
 utils.add_command(count_trait)
 utils.add_command(plot_assembly_dnadiff)
