@@ -123,6 +123,7 @@ def collapse_taxa(df, genus: bool = False, suffix: str = None) -> list:
             except IndexError:
                 continue
             groups.append(g)
+        groups = list(set(groups))
     else:
         raise ValueError('Genus or suffix parameters must be set')
 
