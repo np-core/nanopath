@@ -79,7 +79,7 @@ def plot_multi_abundance(
 
     print(data)
 
-    collapse_taxa(viruses, glob="*virus")
+    collapse_taxa(viruses, glob="*virus*")
 
 
     data.reset_index(level=0, inplace=True)
