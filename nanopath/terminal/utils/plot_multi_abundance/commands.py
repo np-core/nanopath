@@ -129,7 +129,7 @@ def plot_multi_abundance(
     )
 
     # plot grid behind markers
-    plt.grid(ls="--", zorder=1)
+    plt.grid(ls="--", zorder=1, linewidth=0.5)
     # take care of long labels
     fig.autofmt_xdate()
 
