@@ -53,7 +53,8 @@ def plot_multi_abundance(
     )
 
     data = pandas.read_csv(bracken_combined, sep='\t', index_col='name', header=0)
-
+    data.columns = [d.replace(".bracken_frac", "") for d in data.columns]
+    
     # Use percentage rather than total reads across samples
     data = data[[c for c in data.columns if 'frac' in c]]
     # Separate viruses
@@ -88,7 +89,6 @@ def plot_multi_abundance(
 
     print(data)
 
-    data.columns = [d.replace(".bracken_frac", "") for d in data.columns]
 
     groups = collapse_taxa(viruses, suffix="virus")
 
