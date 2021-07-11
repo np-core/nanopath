@@ -29,7 +29,7 @@ def plot_loci_cov(
 
     fig, ax = plt.subplots(
         nrows=nrow, ncols=ncol, figsize=(
-            nrow*9, ncol*4.5
+            nrow*4.5, ncol*9
         )
     )
 
