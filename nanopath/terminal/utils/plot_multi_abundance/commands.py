@@ -137,8 +137,8 @@ def plot_multi_abundance(
     )
 
     # plot grid behind markers
-    p1.grid(ls="dotted", zorder=1, linewidth=0.1)
-    p2.grid(ls="dotted", zorder=1, linewidth=0.1)
+    # p1.grid(ls="dotted", zorder=1, linewidth=0.1)
+    # p2.grid(ls="dotted", zorder=1, linewidth=0.1)
     # take care of long labels
     fig.autofmt_xdate()
 
