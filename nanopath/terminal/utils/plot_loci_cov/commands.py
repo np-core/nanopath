@@ -80,7 +80,7 @@ def plot_loci_cov(
                 )
 
                 if pile is not None:
-                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'])].values[0]
+                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'])].values
                     print(snp_pile)
             else:
                 p.set_title(locus_cov.stem)
