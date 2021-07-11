@@ -30,7 +30,7 @@ from rich.console import Console
     help="Plot bar plot instead of line plot (slow)"
 )
 def plot_loci_cov(
-    cov_path, plot_file, tail_length, snps, bar, pileup
+    cov_path, outfile, tail_length, snps, bar, pileup
 ):
 
     """ Plot a multiple enriched loci from an adaptive sampling run """
@@ -90,5 +90,5 @@ def plot_loci_cov(
     plt.ylabel("Coverage\n")
     plt.xlabel("\nPosition")
 
-    fig.savefig(f'{plot_file}')
+    fig.savefig(f'{outfile}')
 
