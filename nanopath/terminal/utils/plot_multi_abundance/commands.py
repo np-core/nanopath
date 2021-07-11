@@ -110,8 +110,6 @@ def plot_multi_abundance(
     panel1 = combined[combined['domain'] != 'Microbes']
     panel2 = combined[combined['domain'] == 'Microbes']
 
-
-
     panel1.reset_index(level=0, inplace=True)
     panel2.reset_index(level=0, inplace=True)
     panel1.rename(columns={'index': 'taxon'}, inplace=True)
@@ -129,7 +127,9 @@ def plot_multi_abundance(
     panel1_melt['abundance'] = [None if ab == 0. else ab for ab in panel1_melt['abundance']]
     panel2_melt['abundance'] = [None if ab == 0. else ab for ab in panel2_melt['abundance']]
     p1 = sns.scatterplot(
-        data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(50, 2000), ax=ax[0]
+        data=panel1_melt, x="sample", y="taxon", hue="domain",
+        hue_order=['Pathogens', 'Viruses', 'Human', 'Contamination'],
+        size="abundance", legend=False, sizes=(70, 2000), ax=ax[0]
     )
 
     p2 = sns.scatterplot(
