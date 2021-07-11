@@ -143,10 +143,10 @@ def plot_multi_abundance(
     fig.autofmt_xdate()
 
     plt.tight_layout()
-    p1.set_ylab("")
-    p1.set_xlab("")
-    p2.set_ylab("")
-    p2.set_xlab("")
+    p1.set_ylabel("")
+    p1.set_ylabel("")
+    p2.set_ylabel("")
+    p2.set_ylabel("")
     fig.savefig(f'{plot_file}')
 
 
