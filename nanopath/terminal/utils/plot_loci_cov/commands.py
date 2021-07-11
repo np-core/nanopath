@@ -30,7 +30,7 @@ def plot_loci_cov(
     )
 
     for locus in cov_files:
-        coverage = pandas.read_csv(locus, sep="\t", header=False)
+        coverage = pandas.read_csv(locus, sep="\t", header=None, names=["locus", 'position', 'coverage'])
         print(coverage)
 
 
