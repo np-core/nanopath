@@ -57,6 +57,14 @@ def plot_multi_abundance(
     data = data[[c for c in data.columns if 'bracken_frac' in c]]
     data.columns = [d.replace(".bracken_frac", "") for d in data.columns]
 
+    if min_percent > 0:
+        keep_idx = []
+        for i, row in data.iterrows():
+            keep_col = [True for v in row if v >= min_percent]
+            if any(keep_col):
+                keep_idx.append(row.name)
+        data = data[data.index.isin(keep_idx)]
+
     # Separate viruses
     viruses = []
     for name in data.index.tolist():
@@ -77,14 +85,6 @@ def plot_multi_abundance(
 
     print(pathogens)
     print(contams)
-
-    if min_percent > 0:
-        keep_idx = []
-        for i, row in data.iterrows():
-            keep_col = [True for v in row if v >= min_percent]
-            if any(keep_col):
-                keep_idx.append(row.name)
-        data = data[data.index.isin(keep_idx)]
 
     viruses_collapsed = collapse_taxa(viruses, suffix="virus")
 
