@@ -83,8 +83,12 @@ def plot_loci_cov(
                         snp_pile = [None, None, "0", "-", None]
                     c = 'red' if snp_pile[-2] == 0 else 'green'
                     console.print(
-                        f"[{c}]{snp[0]:<15} {snp[2]:<8} A1: {snp[3]:<5}  A2: {snp[4]:<5} Odds: {round(snp[5], 4):<7} "
-                        f"Called: [{c}]{snp_pile[-2]:<10} Coverage: [{c}]{snp_pile[-3]:<10}"
+                        f"[{c}]{snp[0]:<15}[reset] {snp[2]:<8} "
+                        f"A1: {snp[3]:<5} "
+                        f"A2: {snp[4]:<5} "
+                        f"Odds: {round(snp[5], 4):<7} "
+                        f"Called: [{c}]{snp_pile[-2]:<10}[reset] "
+                        f"Coverage: [{c}]{snp_pile[-3]:<10}[reset]"
                     )
             else:
                 p.set_title(locus_cov.stem)
