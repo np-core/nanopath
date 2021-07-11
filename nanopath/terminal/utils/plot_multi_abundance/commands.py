@@ -28,8 +28,12 @@ def plot_multi_abundance(
 
     data = pandas.read_csv(bracken_combined, sep='\t', index_col='name', header=0)
 
-    print(data.index.tolist())
+    # Use percentage rather than total reads across samples
+    data = data[[c for c in data.columns if 'frac' in c]]
+    data.reset_index(level=0, inplace=True)
 
+    print(data)
+    data_melt = data.melt(id_vars=['namw'])
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
 
