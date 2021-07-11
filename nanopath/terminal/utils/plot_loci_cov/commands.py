@@ -11,10 +11,14 @@ from rich import Console
 )
 @click.option(
     "--snps", "-s", type=Path, default=None,
-    help="SNP coordinate file with columns: snp, bp and chr [snps.txt]"
+    help="SNP coordinate file with columns: snp, bp, chr, a1, a2, odds, a1_freq [none]"
 )
 @click.option(
-    "--plot_file", "-p", type=Path, default="multi_locus_coverage.pdf",
+    "--pileup", "-p", type=Path, default=None,
+    help="Pileup file including the SNP coordinates in --snps [none]"
+)
+@click.option(
+    "--outfile", "-o", type=Path, default="multi_locus_coverage.pdf",
     help="Plot output file [multi_locus_coverage.pdf]"
 )
 @click.option(
@@ -26,10 +30,10 @@ from rich import Console
     help="Plot bar plot instead of line plot (slow)"
 )
 def plot_loci_cov(
-    cov_path, plot_file, tail_length, snps, bar
+    cov_path, plot_file, tail_length, snps, bar, pileup
 ):
 
-    """ Plot a multiple enriched loci from an adaptive smpling run """
+    """ Plot a multiple enriched loci from an adaptive sampling run """
 
     cov_files = list(cov_path.glob("*.cov"))
 
@@ -63,11 +67,14 @@ def plot_loci_cov(
                 chrom_contig = '_'.join(locus_cov.stem.split("_")[0:2])  # must be chromosome contig name NC_
                 snp = snps[snps['chr'] == chrom_contig].values[0]
                 p.set_title(f"{snp[0]} @ {snp[2]}")
-                if not bar:
-                    p.axvline(x=int(snp[1]), color='r')
+                p.axvline(x=int(snp[1]), color='r')
                 console.print(
                     f"{snps[0]:<20}@{snps[2]:<8}@{snps[1]:<20}  A1: {snps[3]:<5} Odds: {snps[5]:<7}"
                 )
+                if pileup is not None:
+                    pile = pandas.read_csv(
+                        pileup, sep="\t", header=None, names=['chr', 'pos', 'ref', 'cov', 'bases', 'qual']
+                    )
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
