@@ -106,4 +106,4 @@ def collapse_taxa(df, glob: str = None):
 
     if glob is not None:
         for name in df.index.tolist():
-            print(fnmatch.fnmatch(name, glob))
+            print(fnmatch.fnmatch(name.lower(), glob))
