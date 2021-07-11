@@ -60,7 +60,7 @@ def plot_loci_cov(
             p.yaxis.get_major_locator().set_params(integer=True)
             if snps is not None:
                 p.set_title(f"{snps['snp']} @ {snps['chr']}")
-                p.axvline(x=int(snps['bp']))
+                p.axvline(x=int(snps['bp']), color='r')
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
