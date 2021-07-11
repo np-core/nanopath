@@ -31,7 +31,7 @@ def plot_multi_abundance(
     # Use percentage rather than total reads across samples
     data = data[[c for c in data.columns if 'frac' in c]]
     # Separate viruses
-    for name in data.name:
+    for name in data.index.tolist():
         if 'virus' in name.lower():
             print(data[name])
 
