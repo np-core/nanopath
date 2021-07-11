@@ -33,7 +33,7 @@ def plot_multi_abundance(
     # Separate viruses
     for name in data.index.tolist():
         if 'virus' in name.lower():
-            print(data[name])
+            print(data[data.index == name])
 
     data.reset_index(level=0, inplace=True)
 
