@@ -44,7 +44,7 @@ def plot_multi_abundance(
 
     """ Plot a multiple sample Bracken output"""
 
-    nrow, ncol = 1, 1
+    nrow, ncol = 1, 2
 
     fig, ax = plt.subplots(
         nrows=nrow, ncols=ncol, figsize=(
@@ -127,7 +127,11 @@ def plot_multi_abundance(
     print(panel2_melt)
 
     sns.scatterplot(
-        data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(200, 2000), ax=ax
+        data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(20, 2000), ax=ax[0]
+    )
+
+    sns.scatterplot(
+        data=panel2_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(20, 2000), ax=ax[1]
     )
 
     # plot grid behind markers
