@@ -79,8 +79,9 @@ def plot_multi_abundance(
 
     print(data)
 
-    collapse_taxa(viruses, suffix="virus")
+    groups = collapse_taxa(viruses, suffix="virus")
 
+    print(groups)
 
     data.reset_index(level=0, inplace=True)
 
@@ -102,7 +103,7 @@ def plot_multi_abundance(
     fig.savefig(f'{plot_file}')
 
 
-def collapse_taxa(df, genus: bool = False, suffix: str = None):
+def collapse_taxa(df, genus: bool = False, suffix: str = None) -> list:
     """ Taxa names to collapse are in index of DataFrame """
 
     if suffix is not None:
@@ -121,3 +122,5 @@ def collapse_taxa(df, genus: bool = False, suffix: str = None):
             groups.append(g)
     else:
         raise ValueError('Genus or suffix parameters must be set')
+
+    return groups
