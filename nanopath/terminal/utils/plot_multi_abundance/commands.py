@@ -48,7 +48,7 @@ def plot_multi_abundance(
 
     fig, ax = plt.subplots(
         nrows=nrow, ncols=ncol, figsize=(
-            nrow*14, ncol*14
+            ncol*14, nrow*14
         )
     )
 
