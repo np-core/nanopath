@@ -10,6 +10,10 @@ import seaborn as sns
     "--cov_path", "-c", type=Path, help="Locus specific coverage files from BED file loop directory of .cov files"
 )
 @click.option(
+    "--snps", "-s", type=Path, default=None,
+    help="SNP coordinate file with columns: snp, bp and chr [snps.txt]"
+)
+@click.option(
     "--plot_file", "-p", type=Path, default="multi_locus_coverage.pdf",
     help="Plot output file [multi_locus_coverage.pdf]"
 )
@@ -18,7 +22,7 @@ import seaborn as sns
     help="Additional side sequence coverag added in samtools depth step at each side of target seq [5000 bp]"
 )
 def plot_loci_cov(
-    cov_path, plot_file, tail_length
+    cov_path, plot_file, tail_length, snps
 ):
 
     """ Plot a multiple enriched loci from an adaptive smpling run """
@@ -32,6 +36,9 @@ def plot_loci_cov(
             nrow*4.5, ncol*12
         )
     )
+
+    if snps:
+        snps = pandas.read_csv(snps, sep="\t", header=0)
 
     fidx = 0
     for i in range(nrow):
