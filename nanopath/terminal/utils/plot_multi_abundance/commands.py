@@ -127,11 +127,11 @@ def plot_multi_abundance(
     print(panel2_melt)
 
     p1 = sns.scatterplot(
-        data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(200, 2000), ax=ax[0]
+        data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(50, 2000), ax=ax[0]
     )
 
     p2 = sns.scatterplot(
-        data=panel2_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(200, 2000), ax=ax[1]
+        data=panel2_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(50, 2000), ax=ax[1]
     )
 
     # plot grid behind markers
