@@ -31,14 +31,12 @@ def plot_loci_cov(
 
     for locus in cov_files:
         coverage = pandas.read_csv(locus, sep="\t", header=None, names=["locus", 'position', 'coverage'])
-        print(coverage)
-
-
-    sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
+        sns.barplot(data=coverage, x='position', y="coverage", legend=False, ax=ax)
+        plt.title(locus.stem)
 
     plt.tight_layout()
-    plt.ylabel("Count\n")
-    plt.xlabel("\nAssembly")
+    plt.ylabel("Coverage\n")
+    plt.xlabel("\nPosition")
 
     fig.savefig(f'{plot_file}')
 
