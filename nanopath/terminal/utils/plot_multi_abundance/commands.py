@@ -88,6 +88,8 @@ def plot_multi_abundance(
 
     print(data)
 
+    data.columns = [d.replace(".bracken_frac") for d in data.columns]
+
     groups = collapse_taxa(viruses, suffix="virus")
 
     print(groups)
@@ -99,7 +101,6 @@ def plot_multi_abundance(
     # data.reset_index(level=0, inplace=True)
     #
     # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
-    # data_melt['sample'] = data_melt['sample'].str.replace(".bracken_frac", "")
     #
     # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
     #
