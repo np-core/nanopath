@@ -115,7 +115,7 @@ def plot_multi_abundance(
     # fig.savefig(f'{plot_file}')
 
 
-def collapse_taxa(df, genus: bool = False, suffix: str = None) -> list:
+def collapse_taxa(df, genus: bool = False, suffix: str = None) -> pandas.DataFrame:
     """ Taxa names to collapse are in index of DataFrame """
 
     if suffix is not None:
@@ -136,4 +136,12 @@ def collapse_taxa(df, genus: bool = False, suffix: str = None) -> list:
     else:
         raise ValueError('Genus or suffix parameters must be set')
 
-    return groups
+    grouped = []
+    for group, gdata in df.groupby(groups):
+        print(f'Collapsing species in genus: {group}')
+        gdata = gdata.apply(sum, axis=1)
+        print(gdata)
+        
+    grouped = pandas.DataFrame(grouped)
+
+    return grouped
