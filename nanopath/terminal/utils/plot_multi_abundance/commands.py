@@ -64,16 +64,15 @@ def plot_multi_abundance(
             viruses.append(data[data.index == name])
     viruses = pandas.concat(viruses)
     data = data.drop(viruses.index.tolist())
-    print(viruses)
 
     human = data[data.index == 'Homo sapiens']
     data = data.drop('Homo sapiens')
     print(human)
 
-    pathogens = data[data.index.isin(PATHOGENS)]
+    pathogens = data[data.index.isin(PATHOGENS)].sort_values()
     data = data.drop(PATHOGENS)
 
-    contams = data[data.index.isin(CONTAM)]
+    contams = data[data.index.isin(CONTAM)].sort_values()
     data = data.drop(CONTAM)
 
     print(pathogens)
