@@ -105,11 +105,17 @@ def plot_multi_abundance(
 
     print(combined)
 
+    panel1 = combined[combined['domain'] != 'Microbes']
+    panel2 = combined[combined['domain'] == 'Microbes']
+
+
+
     # data.reset_index(level=0, inplace=True)
     #
     # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
     #
-    # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
+    # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", hue="domain",
+    # size="pop", legend=False, sizes=(20, 2000), ax=ax)
     #
     # # plot grid behind markers
     # plt.grid(ls="--", zorder=1)
