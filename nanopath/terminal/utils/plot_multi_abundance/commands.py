@@ -112,7 +112,9 @@ def plot_multi_abundance(
 
     panel1.reset_index(level=0, inplace=True)
     panel2.reset_index(level=0, inplace=True)
-
+    panel1.rename(columns={'index': 'Taxon'}, inplace=True)
+    panel2.rename(columns={'index': 'Taxon'}, inplace=True)
+    
     print(panel1)
     print(panel2)
     #
