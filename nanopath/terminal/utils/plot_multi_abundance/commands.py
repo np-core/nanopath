@@ -110,7 +110,11 @@ def plot_multi_abundance(
 
 
 
-    # data.reset_index(level=0, inplace=True)
+    panel1.reset_index(level=0, inplace=True)
+    panel2.reset_index(level=0, inplace=True)
+
+    print(panel1)
+    print(panel2)
     #
     # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
     #
