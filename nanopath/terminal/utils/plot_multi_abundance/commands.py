@@ -60,17 +60,22 @@ def plot_multi_abundance(
         if 'virus' in name.lower():
             viruses.append(data[data.index == name])
     viruses = pandas.concat(viruses)
+    data = data.drop(viruses.index.tolist())
     print(viruses)
 
     human = data[data.index == 'Homo sapiens']
+    data = data.drop('Homo sapiens')
     print(human)
 
     if min_percent > 0:
+        keep_idx = []
         for i, row in data.iterrows():
             keep_col = [True for v in row if v >= min_percent]
             if any(keep_col):
-                print(row.name)
-                print(row)
+                keep_idx.append(row.name)
+        data = data[data.index.isin(keep_idx)]
+
+    print(data)
 
     collapse_taxa(viruses, by_name_until="virus")
 
