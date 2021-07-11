@@ -28,7 +28,7 @@ def plot_multi_abundance(
 
     data = pandas.read_csv(bracken_combined, sep='\t', index_col='name', header=0)
 
-    print(data.name.tolist())
+    print(data.index.tolist())
 
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
