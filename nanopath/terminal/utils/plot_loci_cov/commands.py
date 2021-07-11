@@ -21,8 +21,12 @@ import seaborn as sns
     "--tail_length", "-t", type=int, default=0,
     help="Additional side sequence coverag added in samtools depth step at each side of target seq [5000 bp]"
 )
+@click.option(
+    "--bar", "-b", is_flag=True,
+    help="Plot bar plot instead of line plot (slow)"
+)
 def plot_loci_cov(
-    cov_path, plot_file, tail_length, snps
+    cov_path, plot_file, tail_length, snps, bar
 ):
 
     """ Plot a multiple enriched loci from an adaptive smpling run """
@@ -48,7 +52,11 @@ def plot_loci_cov(
             if tail_length > 0:
                 coverage = coverage.iloc[tail_length:len(coverage) - tail_length]
             print(coverage)
-            p = sns.barplot(x=coverage.position, y=coverage.coverage, ax=ax[i][c])
+            if bar:
+                p = sns.barplot(x=coverage.position, y=coverage.coverage, color='gray', ax=ax[i][c])
+            else:
+                p = sns.lineplot(x=coverage.position, y=coverage.coverage, color='gray', ax=ax[i][c])
+            p.set_xticks([])
             p.set_title(locus_cov.stem)
             fidx += 1
 
