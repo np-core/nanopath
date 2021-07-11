@@ -13,8 +13,12 @@ import seaborn as sns
     "--plot_file", "-p", type=Path, default="multi_locus_coverage.pdf",
     help="Plot output file [multi_locus_coverage.pdf]"
 )
+@click.option(
+    "--tail_length", "-t", type=int, default=5000,
+    help="Additional side sequence coverag added in samtools depth step at each side of target seq [5000 bp]"
+)
 def plot_loci_cov(
-    cov_path, plot_file
+    cov_path, plot_file, tail_length
 ):
 
     """ Plot a multiple enriched loci from an adaptive smpling run """
@@ -31,6 +35,8 @@ def plot_loci_cov(
 
     for locus in cov_files:
         coverage = pandas.read_csv(locus, sep="\t", header=None, names=["locus", 'position', 'coverage'])
+        if tail_length > 0:
+            coverage = coverage.iloc[tail_length:len(coverage)-tail_length]
         sns.barplot(data=coverage, x='position', y="coverage", legend=False, ax=ax)
         plt.title(locus.stem)
 
