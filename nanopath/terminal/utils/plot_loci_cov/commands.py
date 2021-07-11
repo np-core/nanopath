@@ -59,8 +59,10 @@ def plot_loci_cov(
             p.set_xticks([])
             p.yaxis.get_major_locator().set_params(integer=True)
             if snps is not None:
-                p.set_title(f"{snps['snp']} @ {snps['chr']}")
-                p.axvline(x=int(snps['bp']), color='r')
+                chrom_contig = locus_cov.stem.split("_")[0]  # must be chromosome contig name
+                snp = snps[snps['chr'] == chrom_contig]
+                p.set_title(f"{snp['snp']} @ {snp['chr']}")
+                p.axvline(x=int(snp['bp']), color='r')
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
