@@ -38,7 +38,7 @@ def plot_loci_cov(
         if tail_length > 0:
             coverage = coverage.iloc[tail_length:len(coverage)-tail_length]
         print(coverage)
-        sns.lineplot(data=coverage, x='position', y="coverage", legend=False, ax=ax)
+        sns.lineplot(x=coverage.position, y=coverage.coverage, ax=ax)
         plt.title(locus.stem)
 
     plt.tight_layout()
