@@ -4,16 +4,40 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 import seaborn as sns
 
+PATHOGENS = [
+    'Burkholderia pseudomallei',
+    'Escherichia coli',
+    'Klebsiella pneumoniae',
+    'Pseudomonas aeruginosa',
+    'Salmonella enterica',
+    'Staphylococcus aureus'
+    'Staphylococcus epidermidis',
+    'Streptococcus pneumoniae'
+]
+
+CONTAM = [
+    'Enterococcus faecium',
+    'Prevotella dentalis',
+    'Pseudomonas azotoformans',
+    'Pseudomonas putida',
+    'Pseudomonas poae',
+    'Streptococcus oralis'
+]
+
 
 @click.command()
 @click.option(
     "--bracken_combined", "-b", type=Path, help="Multi sample Bracken abundance estimates"
 )
 @click.option(
+    "--min_percent", "-m", type=float, default=0.001,
+    help="Minimum percent abundance of species (S) in sample to include [0.001]"
+)
+@click.option(
     "--plot_file", "-p", type=Path, default="multi_abundance.pdf", help="Plot output file [multi_abundance.pdf]"
 )
 def plot_multi_abundance(
-    bracken_combined, plot_file
+    bracken_combined, plot_file, min_percent
 ):
 
     """ Plot a multiple sample Bracken output"""
@@ -37,6 +61,18 @@ def plot_multi_abundance(
             viruses.append(data[data.index == name])
     viruses = pandas.concat(viruses)
     print(viruses)
+
+    human = data[data.index == 'Homo sapiens']
+    print(human)
+
+    if min_percent > 0:
+        for i, row in data.iterrows():
+            keep_col = [True for v in row if v >= min_percent]
+            if any(keep_col):
+                print(row)
+
+    collapse_taxa(viruses, by_name_until="virus")
+
 
     data.reset_index(level=0, inplace=True)
 
