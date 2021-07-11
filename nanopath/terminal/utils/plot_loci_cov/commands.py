@@ -60,6 +60,7 @@ def plot_loci_cov(
             p.yaxis.get_major_locator().set_params(integer=True)
             if snps is not None:
                 chrom_contig = locus_cov.stem.split("_")[0]  # must be chromosome contig name
+                print(snps['chr'], chrom_contig)
                 snp = snps[snps['chr'] == chrom_contig].values
                 print(snp)
                 p.set_title(f"{snp[0]} @ {snp[2]}")
