@@ -29,7 +29,7 @@ def plot_loci_cov(
 
     fig, ax = plt.subplots(
         nrows=nrow, ncols=ncol, figsize=(
-            nrow*4.5, ncol*9
+            nrow*4.5, ncol*12
         )
     )
 
@@ -41,7 +41,7 @@ def plot_loci_cov(
             if tail_length > 0:
                 coverage = coverage.iloc[tail_length:len(coverage) - tail_length]
             print(coverage)
-            sns.lineplot(x=coverage.position, y=coverage.coverage, ax=ax[i][c])
+            sns.barplot(x=coverage.position, y=coverage.coverage, ax=ax[i][c])
             plt.title(locus_cov.stem)
             fidx += 1
 
