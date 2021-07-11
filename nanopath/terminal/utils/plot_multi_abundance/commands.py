@@ -88,7 +88,7 @@ def plot_multi_abundance(
 
     print(data)
 
-    data.columns = [d.replace(".bracken_frac") for d in data.columns]
+    data.columns = [d.replace(".bracken_frac", "") for d in data.columns]
 
     groups = collapse_taxa(viruses, suffix="virus")
 
