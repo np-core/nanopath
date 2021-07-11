@@ -33,7 +33,8 @@ def plot_multi_abundance(
     data.reset_index(level=0, inplace=True)
 
     print(data)
-    data_melt = data.melt(id_vars=['name'])
+    data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
+    data_melt['sample'] = data_melt['sample'].str.replace(".bracken_frac", "")
     print(data_melt)
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
