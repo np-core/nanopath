@@ -69,6 +69,15 @@ def plot_multi_abundance(
     data = data.drop('Homo sapiens')
     print(human)
 
+    pathogens = data[data.index.isin(PATHOGENS)]
+    data = data.drop(PATHOGENS)
+
+    contams = data[data.index.isin(CONTAM)]
+    data = data.drop(CONTAM)
+
+    print(pathogens)
+    print(contams)
+
     if min_percent > 0:
         keep_idx = []
         for i, row in data.iterrows():
