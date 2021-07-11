@@ -77,11 +77,13 @@ def plot_multi_abundance(
     data = data.drop('Homo sapiens')
     print(human)
 
-    pathogens = data[data.index.isin(PATHOGENS)].sort_index()
-    data = data.drop(PATHOGENS)
+    REMAINING_PATHOGENS = [p for p in PATHOGENS if p in data.index.tolist()]
+    pathogens = data[data.index.isin(REMAINING_PATHOGENS)].sort_index()
+    data = data.drop(REMAINING_PATHOGENS)
 
-    contams = data[data.index.isin(CONTAM)].sort_index()
-    data = data.drop(CONTAM)
+    REMAINING_CONTAMINATION = [p for p in CONTAM if p in data.index.tolist()]
+    contams = data[data.index.isin(REMAINING_CONTAMINATION)].sort_index()
+    data = data.drop(REMAINING_CONTAMINATION)
 
     print(pathogens)
     print(contams)
