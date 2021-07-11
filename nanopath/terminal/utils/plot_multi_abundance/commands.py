@@ -34,6 +34,7 @@ def plot_multi_abundance(
 
     print(data)
     data_melt = data.melt(id_vars=['name'])
+    print(data_melt)
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
 
