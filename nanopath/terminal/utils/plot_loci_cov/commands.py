@@ -84,7 +84,7 @@ def plot_loci_cov(
                     c = 'red' if snp_pile[-3] == 0 else 'green'
                     oc = 'red' if snp[5] > 1. else 'green'
                     console.print(
-                        f"[{c}]{snp[0]:<15}[reset] {snp[2]:<8} "
+                        f"[{c}]{snp[0]:<15}[reset] "
                         f"A1: {snp[3]:<5} "
                         f"A2: {snp[4]:<5} "
                         f"Odds: [{oc}]{round(snp[5], 4):<7}[reset] "
