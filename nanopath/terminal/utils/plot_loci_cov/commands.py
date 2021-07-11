@@ -57,6 +57,7 @@ def plot_loci_cov(
             else:
                 p = sns.lineplot(x=coverage.position, y=coverage.coverage, color='gray', ax=ax[i][c])
             p.set_xticks([])
+            p.yaxis.get_major_locator().set_params(integer=True)
             p.set_title(locus_cov.stem)
             fidx += 1
 
