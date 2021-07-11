@@ -87,15 +87,13 @@ def plot_multi_abundance(
                 keep_idx.append(row.name)
         data = data[data.index.isin(keep_idx)]
 
-    print(data)
+    viruses_collapsed = collapse_taxa(viruses, suffix="virus")
 
-    groups = collapse_taxa(viruses, suffix="virus")
+    print(viruses_collapsed)
 
-    print(groups)
+    other_collapsed = collapse_taxa(data, genus=True)
 
-    groups = collapse_taxa(data, genus=True)
-
-    print(groups)
+    print(other_collapsed)
 
     # data.reset_index(level=0, inplace=True)
     #
@@ -123,7 +121,6 @@ def collapse_taxa(df: pandas.DataFrame, genus: bool = False, suffix: str = None)
         for name in df.index.tolist():
             if suffix in name:
                 group_names.append(name.split(suffix)[0] + 'virus')
-        groups = list(set(group_names))
     elif genus:
         group_names = []
         for name in df.index.tolist():
@@ -132,17 +129,15 @@ def collapse_taxa(df: pandas.DataFrame, genus: bool = False, suffix: str = None)
             except IndexError:
                 continue
             group_names.append(g)
-        groups = list(set(group_names))
     else:
         raise ValueError('Genus or suffix parameters must be set')
 
     grouped = []
     df.index = group_names
-    print(df)
     for group, gdata in df.groupby(df.index):
         print(f'Collapsing species in genus: {group}')
-        gdata = gdata.apply(sum, axis=0)
-        print(gdata)
+        d = gdata.apply(sum, axis=0)
+        grouped.append(d)
 
     grouped = pandas.DataFrame(grouped)
 
