@@ -3,7 +3,7 @@ import pandas
 from pathlib import Path
 from matplotlib import pyplot as plt
 import seaborn as sns
-
+from rich import Console
 
 @click.command()
 @click.option(
@@ -44,6 +44,8 @@ def plot_loci_cov(
     if snps:
         snps = pandas.read_csv(snps, sep="\t", header=0)
 
+    console = Console()
+
     fidx = 0
     for i in range(nrow):
         for c in range(ncol):
@@ -51,7 +53,6 @@ def plot_loci_cov(
             coverage = pandas.read_csv(locus_cov, sep="\t", header=None, names=["locus", 'position', 'coverage'])
             if tail_length > 0:
                 coverage = coverage.iloc[tail_length:len(coverage) - tail_length]
-            print(coverage)
             if bar:
                 p = sns.barplot(x=coverage.position, y=coverage.coverage, color='gray', ax=ax[i][c])
             else:
@@ -60,12 +61,13 @@ def plot_loci_cov(
             p.yaxis.get_major_locator().set_params(integer=True)
             if snps is not None:
                 chrom_contig = '_'.join(locus_cov.stem.split("_")[0:2])  # must be chromosome contig name NC_
-                print(snps['chr'], chrom_contig)
                 snp = snps[snps['chr'] == chrom_contig].values[0]
-                print(snp)
                 p.set_title(f"{snp[0]} @ {snp[2]}")
                 if not bar:
                     p.axvline(x=int(snp[1]), color='r')
+                console.print(
+                    f"{snps[0]:<20}@{snps[2]:<8}@{snps[1]:<20}  A1: {snps[3]:<5} Odds: {snps[5]:<7}"
+                )
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
