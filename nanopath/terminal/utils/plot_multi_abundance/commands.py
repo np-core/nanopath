@@ -12,9 +12,9 @@ PATHOGENS = [
     'Klebsiella pneumoniae',
     'Pseudomonas aeruginosa',
     'Salmonella enterica',
-    'Staphylococcus aureus'
+    'Staphylococcus aureus',
     'Staphylococcus epidermidis',
-    'Streptococcus pneumoniae'
+    'Streptococcus pneumoniae',
 ]
 
 CONTAM = [
@@ -23,7 +23,7 @@ CONTAM = [
     'Pseudomonas azotoformans',
     'Pseudomonas putida',
     'Pseudomonas poae',
-    'Streptococcus oralis'
+    'Streptococcus oralis',
 ]
 
 
