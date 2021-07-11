@@ -81,12 +81,13 @@ def plot_loci_cov(
                         snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values[0]
                     except IndexError:
                         snp_pile = [None, None, "0", "-", None]
-                    c = 'red' if snp_pile[-2] == 0 else 'green'
+                    c = 'red' if snp_pile[-3] == 0 else 'green'
+                    oc = 'red' if snp[5] > 1. else 'green'
                     console.print(
                         f"[{c}]{snp[0]:<15}[reset] {snp[2]:<8} "
                         f"A1: {snp[3]:<5} "
                         f"A2: {snp[4]:<5} "
-                        f"Odds: {round(snp[5], 4):<7} "
+                        f"Odds: [{oc}]{round(snp[5], 4):<7}[reset] "
                         f"Called: [{c}]{snp_pile[-2]:<10}[reset] "
                         f"Coverage: [{c}]{snp_pile[-3]:<10}[reset]"
                     )
