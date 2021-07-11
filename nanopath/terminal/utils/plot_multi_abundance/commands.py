@@ -69,6 +69,7 @@ def plot_multi_abundance(
         for i, row in data.iterrows():
             keep_col = [True for v in row if v >= min_percent]
             if any(keep_col):
+                print(row.name)
                 print(row)
 
     collapse_taxa(viruses, by_name_until="virus")
