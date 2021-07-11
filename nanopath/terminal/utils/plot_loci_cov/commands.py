@@ -50,6 +50,13 @@ def plot_loci_cov(
 
     console = Console()
 
+    if pileup is not None:
+        pile = pandas.read_csv(
+            pileup, sep="\t", header=None, names=['chr', 'pos', 'ref', 'cov', 'bases', 'qual']
+        )
+    else:
+        pile = None
+
     fidx = 0
     for i in range(nrow):
         for c in range(ncol):
@@ -71,14 +78,13 @@ def plot_loci_cov(
                 console.print(
                     f"{snps[0]:<20}@{snps[2]:<8}@{snps[1]:<20}  A1: {snps[3]:<5} Odds: {snps[5]:<7}"
                 )
-                if pileup is not None:
-                    pile = pandas.read_csv(
-                        pileup, sep="\t", header=None, names=['chr', 'pos', 'ref', 'cov', 'bases', 'qual']
-                    )
+
+                if pile is not None:
+                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'])].values[0]
+                    print(snp_pile)
             else:
                 p.set_title(locus_cov.stem)
             fidx += 1
-
 
     plt.tight_layout()
     plt.ylabel("Coverage\n")
