@@ -80,7 +80,8 @@ def plot_loci_cov(
                     try:
                         snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values[0]
                     except IndexError:
-                        snp_pile = [None, None, "0", "-", None]
+                        snp_pile = [None, None, 0, "-", None]
+
                     c = 'red' if snp_pile[-3] == 0 else 'green'
                     oc = 'red' if snp[5] > 1. else 'green'
                     console.print(
