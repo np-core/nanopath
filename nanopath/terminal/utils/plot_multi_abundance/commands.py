@@ -112,14 +112,14 @@ def plot_multi_abundance(
 
     panel1.reset_index(level=0, inplace=True)
     panel2.reset_index(level=0, inplace=True)
-    panel1.rename(columns={'index': 'Taxon'}, inplace=True)
-    panel2.rename(columns={'index': 'Taxon'}, inplace=True)
+    panel1.rename(columns={'index': 'taxon'}, inplace=True)
+    panel2.rename(columns={'index': 'taxon'}, inplace=True)
 
     print(panel1)
     print(panel2)
     #
-    panel1_melt = panel1.melt(id_vars=['Taxon', 'domain'], value_name="abundance", var_name="sample")
-    panel2_melt = panel2.melt(id_vars=['Taxon', 'domain'], value_name="abundance", var_name="sample")
+    panel1_melt = panel1.melt(id_vars=['taxon', 'domain'], value_name="abundance", var_name="sample")
+    panel2_melt = panel2.melt(id_vars=['taxon', 'domain'], value_name="abundance", var_name="sample")
 
 
     print(panel1_melt)
