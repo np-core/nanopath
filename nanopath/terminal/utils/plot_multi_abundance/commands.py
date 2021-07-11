@@ -85,23 +85,25 @@ def plot_multi_abundance(
 
     groups = collapse_taxa(data, genus=True)
 
-    data.reset_index(level=0, inplace=True)
+    print(groups)
 
-    data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
-    data_melt['sample'] = data_melt['sample'].str.replace(".bracken_frac", "")
-
-    sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
-
-    # plot grid behind markers
-    plt.grid(ls="--", zorder=1)
-    # take care of long labels
-    fig.autofmt_xdate()
-
-    plt.tight_layout()
-    plt.ylabel("Count\n")
-    plt.xlabel("\nAssembly")
-
-    fig.savefig(f'{plot_file}')
+    # data.reset_index(level=0, inplace=True)
+    #
+    # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
+    # data_melt['sample'] = data_melt['sample'].str.replace(".bracken_frac", "")
+    #
+    # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
+    #
+    # # plot grid behind markers
+    # plt.grid(ls="--", zorder=1)
+    # # take care of long labels
+    # fig.autofmt_xdate()
+    #
+    # plt.tight_layout()
+    # plt.ylabel("Count\n")
+    # plt.xlabel("\nAssembly")
+    #
+    # fig.savefig(f'{plot_file}')
 
 
 def collapse_taxa(df, genus: bool = False, suffix: str = None) -> list:
