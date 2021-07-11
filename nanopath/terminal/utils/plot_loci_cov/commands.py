@@ -76,11 +76,11 @@ def plot_loci_cov(
                 p.set_title(f"{snp[0]} @ {snp[2]}")
                 p.axvline(x=int(snp[1]), color='r')
                 console.print(
-                    f"{snp[0]:<20}@{snp[2]:<8}@{snp[1]:<20}  A1: {snp[3]:<5} Odds: {snp[5]:<7}"
+                    f"{snp[0]:<20} {snp[2]:<8} {snp[1]:<20}  A1: {snp[3]:<5} Odds: {snp[5]:<7}"
                 )
 
                 if pile is not None:
-                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'])].values
+                    snp_pile = pile[(pile['chr'] == snp[2]) & (pile['pos'] == snp[1])].values
                     print(snp_pile)
             else:
                 p.set_title(locus_cov.stem)
