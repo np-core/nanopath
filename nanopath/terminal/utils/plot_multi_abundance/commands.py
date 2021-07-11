@@ -126,16 +126,17 @@ def plot_multi_abundance(
     print(panel1_melt)
     print(panel2_melt)
 
-    sns.scatterplot(
+    p1 = sns.scatterplot(
         data=panel1_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(20, 2000), ax=ax[0]
     )
 
-    sns.scatterplot(
+    p2 = sns.scatterplot(
         data=panel2_melt, x="sample", y="taxon", hue="domain", size="abundance", legend=False, sizes=(20, 2000), ax=ax[1]
     )
 
     # plot grid behind markers
-    plt.grid(ls="--", zorder=1, linewidth=0.5)
+    p1.grid(ls="---", zorder=1, linewidth=0.1)
+    p2.grid(ls="---", zorder=1, linewidth=0.1)
     # take care of long labels
     fig.autofmt_xdate()
 
