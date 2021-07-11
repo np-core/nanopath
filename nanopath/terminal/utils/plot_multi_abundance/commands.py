@@ -126,6 +126,8 @@ def plot_multi_abundance(
 
     panel1_melt['abundance'] = [None if ab == 0. else ab for ab in panel1_melt['abundance']]
     panel2_melt['abundance'] = [None if ab == 0. else ab for ab in panel2_melt['abundance']]
+    panel1_melt = panel1_melt.sort_values(['domain', 'taxon'])
+    panel2_melt = panel2_melt.sort_values(['domain', 'taxon'])
     p1 = sns.scatterplot(
         data=panel1_melt, x="sample", y="taxon", hue="domain",
         hue_order=['Pathogens', 'Viruses', 'Human', 'Contamination'],
