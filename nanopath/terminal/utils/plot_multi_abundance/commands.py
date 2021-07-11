@@ -30,12 +30,16 @@ def plot_multi_abundance(
 
     # Use percentage rather than total reads across samples
     data = data[[c for c in data.columns if 'frac' in c]]
+    # Separate viruses
+    for name in data.name:
+        if 'virus' in name.lower():
+            print(data[name])
+
     data.reset_index(level=0, inplace=True)
 
-    print(data)
     data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
     data_melt['sample'] = data_melt['sample'].str.replace(".bracken_frac", "")
-    print(data_melt)
+
 
     sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", size="pop", legend=False, sizes=(20, 2000), ax=ax)
 
