@@ -121,23 +121,23 @@ def plot_multi_abundance(
     panel1_melt = panel1.melt(id_vars=['taxon', 'domain'], value_name="abundance", var_name="sample")
     panel2_melt = panel2.melt(id_vars=['taxon', 'domain'], value_name="abundance", var_name="sample")
 
-
     print(panel1_melt)
     print(panel2_melt)
-    #
-    # sns.scatterplot(data=data, x="gdpPercap", y="lifeExp", hue="domain",
-    # size="pop", legend=False, sizes=(20, 2000), ax=ax)
-    #
-    # # plot grid behind markers
-    # plt.grid(ls="--", zorder=1)
-    # # take care of long labels
-    # fig.autofmt_xdate()
-    #
-    # plt.tight_layout()
-    # plt.ylabel("Count\n")
-    # plt.xlabel("\nAssembly")
-    #
-    # fig.savefig(f'{plot_file}')
+
+    sns.scatterplot(
+        data=panel1_melt, x="sample", y="tax", hue="domain", size="abundance", legend=False, sizes=(20, 2000), ax=ax
+    )
+
+    # plot grid behind markers
+    plt.grid(ls="--", zorder=1)
+    # take care of long labels
+    fig.autofmt_xdate()
+    
+    plt.tight_layout()
+    plt.ylabel("")
+    plt.xlabel("")
+
+    fig.savefig(f'{plot_file}')
 
 
 def collapse_taxa(df: pandas.DataFrame, genus: bool = False, suffix: str = None) -> pandas.DataFrame:
