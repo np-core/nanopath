@@ -13,7 +13,6 @@ PATHOGENS = [
     'Pseudomonas aeruginosa',
     'Salmonella enterica',
     'Staphylococcus aureus',
-    'Staphylococcus epidermidis',
     'Streptococcus pneumoniae',
 ]
 
@@ -21,6 +20,7 @@ CONTAM = [
     'Enterococcus faecium',
     'Prevotella dentalis',
     'Pseudomonas azotoformans',
+    'Staphylococcus epidermidis',
     'Pseudomonas putida',
     'Pseudomonas poae',
     'Streptococcus oralis',
