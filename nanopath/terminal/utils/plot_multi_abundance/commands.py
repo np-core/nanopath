@@ -31,9 +31,12 @@ def plot_multi_abundance(
     # Use percentage rather than total reads across samples
     data = data[[c for c in data.columns if 'frac' in c]]
     # Separate viruses
+    viruses = []
     for name in data.index.tolist():
         if 'virus' in name.lower():
-            print(data[data.index == name])
+            viruses.append(data[data.index == name])
+    viruses = pandas.concat(viruses)
+    print(viruses)
 
     data.reset_index(level=0, inplace=True)
 
