@@ -140,5 +140,6 @@ def collapse_taxa(df: pandas.DataFrame, genus: bool = False, suffix: str = None)
         grouped.append(d)
 
     grouped = pandas.DataFrame(grouped)
+    grouped.index = group_names
 
     return grouped
