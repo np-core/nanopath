@@ -84,7 +84,14 @@ def plot_loci_cov(
 
                     c = 'red' if snp_pile[-3] == 0 else 'green'
                     oc = 'red' if snp[5] > 1. else 'green'
-                    a1_color = 'red' if snp_pile[-2].upper().count(snp[3]) > snp_pile[-3]//2 else 'reset'
+                    coverage_condition = snp_pile[-2].upper().count(snp[3]) > snp_pile[-3]//2
+                    if coverage_condition and snp[5] > 1.:
+                        a1_color = 'red'
+                    elif coverage_condition and snp[5] <= 1.:
+                        a1_color = 'green'
+                    else:
+                        a1_color = 'reset'
+                        
                     console.print(
                         f"[{c}]{snp[0]:<15}[reset] "
                         f"A1: [{a1_color}]{snp[3]:<5}[reset] "
