@@ -94,6 +94,17 @@ def plot_multi_abundance(
 
     print(other_collapsed)
 
+    combined = []
+    for name, df in {
+        'Human': human, 'Pathogens': pathogens, 'Contamination': contams,
+        'Viruses': viruses_collapsed, 'Microbes': other_collapsed
+    }.items():
+        df['domain'] = [name for _ in range(len(df))]
+        combined.append(df)
+    combined = pandas.concat(combined)
+
+    print(combined)
+
     # data.reset_index(level=0, inplace=True)
     #
     # data_melt = data.melt(id_vars=['name'], value_name="abundance", var_name="sample")
