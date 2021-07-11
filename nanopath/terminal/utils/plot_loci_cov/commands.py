@@ -37,6 +37,7 @@ def plot_loci_cov(
         coverage = pandas.read_csv(locus, sep="\t", header=None, names=["locus", 'position', 'coverage'])
         if tail_length > 0:
             coverage = coverage.iloc[tail_length:len(coverage)-tail_length]
+        print(coverage)
         sns.barplot(data=coverage, x='position', y="coverage", legend=False, ax=ax)
         plt.title(locus.stem)
 
