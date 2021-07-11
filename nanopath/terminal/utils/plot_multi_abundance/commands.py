@@ -141,7 +141,7 @@ def collapse_taxa(df: pandas.DataFrame, genus: bool = False, suffix: str = None)
     print(df)
     for group, gdata in df.groupby(df.index):
         print(f'Collapsing species in genus: {group}')
-        gdata = gdata.apply(sum, axis=1)
+        gdata = gdata.apply(sum, axis=0)
         print(gdata)
 
     grouped = pandas.DataFrame(grouped)
